@@ -1,0 +1,7 @@
+## Interface: 30000
+## Title: Death Bet Addon
+## Author: Justin Toth
+## SavedVariablesPerCharacter: Death_Bet_History
+## Version: 0.1
+Death Bet.xml
+Death Bet.lua
