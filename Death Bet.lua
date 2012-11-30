@@ -236,9 +236,13 @@ function Death_Bet_OnEvent(self, event, ...)
 		--If player already bet then change their bet
 		--Otherwise add new bet
 		if rebet == 0 then
-			DeathBet['Player'][lastkey+1]=arg2
-			DeathBet['Bad'][lastkey+1]=strupper(split1[2])
-			DeathBet['Bet'][lastkey+1]=split1[3]
+			for key,value in pairs(DeathBet['Raid']) do
+				if strupper(split1[2]) == value then
+					DeathBet['Player'][lastkey+1]=arg2
+					DeathBet['Bad'][lastkey+1]=strupper(split1[2])
+					DeathBet['Bet'][lastkey+1]=split1[3]
+				end
+			end
 		else
 			DeathBet['Bad'][rebet]=strupper(split1[2])
 			DeathBet['Bet'][rebet]=split1[3]
