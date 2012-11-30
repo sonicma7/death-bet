@@ -7,6 +7,8 @@ local PARTY_OR_RAID = bit.bor(COMBATLOG_OBJECT_AFFILIATION_PARTY,
 --Bet = bet player made
 --Raid = table to keep track of players in raid
 DeathBet = {['Bad'] = {}, ['Player'] = {}, ['Bet']={}, ['Raid']={}};
+--Keep raid count
+RaidMemberCount = 0;
 
 
 function Death_Bet_OnMouseDown()
@@ -86,12 +88,88 @@ function Remove_Bet(player)
 	end
 end
 
+function Remove_Bad(bad)
+	local removekey = {}
+	local i = 1
+	
+	--Find all bets on player
+	for key,value in pairs(DeathBet['Bad']) do
+		if value == bad then
+			removekey[i] = value
+			i = i + 1
+		end
+	end
+
+	--Reverse sort removekey table
+	table.sort(removekey,
+		function(x,y)
+			return x > y
+		end
+		)
+	
+	--Remove players bet on in reverse order since the table.remove function
+	--may fill in old key with next key thus making next removal wrong
+	for key,value in pairs(removekey) do
+		table.remove(DeathBet['Player'], value)
+		table.remove(DeathBet['Bet'], value)
+		table.remove(DeathBet['Bad'], value)
+	end
+end
+		
+		
+
 --Function to refill Raid array with current members
 --Called on GROUP_ROSTER_UPDATE
 function DB_Fill_Raid()
+	--Get current count of group members
+	local curCount = GetNumGroupMembers()
 
+	--If count is different reset 'Raid' table
+	if RaidMemberCount ~= curCount then
+		RaidMemberCount = curCount
+		for k in pairs(DeathBet['Raid']) do
+			DeathBet['Raid'][k] = nil
+		end
+		for i=1,RaidMemberCount,1 do
+			local name, rank, subgroup, level, class, fileName,
+				zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(i)
+			DeathBet['Raid'][i] = strupper(name)
+		end
+	end
+	
+	--Create table for list of people to remove from bets if left raid
+	local BadRemove = {}
+	for key,value in pairs(DeathBet['Bad']) do
+		local badfound = 0
+		--If in raid, set found
+		for key2,value2 in pairs(DeathBet['Raid']) do
+			if value == value2 then
+				badfound = 1
+			end
+		end
+		
+		--If found not set to 1 then not found in raid so add that player to list
+		--Do not add to list if already on list
+		if badfound == 0 then
+			local lastkey = 0
+			local badremfound = 0
+			for key3,value3 pairs(BadRemove) do
+				lastkey = key3
+				if value3 == value then
+					badremfound = 1
+				end
+			end
+			
+			if badremfound == 0 then
+				BadRemove[lastkey + 1] = value
+			end
+		end
+	end
 
-
+	--For all people on list call function to remove them
+	for key,value in pairs(BadRemove) do
+		Remove_Bad(value)
+	end
 end
 
 function DBSpread()
