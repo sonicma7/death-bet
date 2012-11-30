@@ -44,6 +44,7 @@ end
 function START_Command(cmd)
 	--Start gambling
 	if cmd == "start" and DBActive == 0 then
+		DB_Fill_Raid()
 		local index = GetChannelName("MacheteGamble")
 		SendChatMessage("=======================","CHANNEL","ORCISH",index)
 		SendChatMessage("Betting has started ","CHANNEL","ORCISH",index)
