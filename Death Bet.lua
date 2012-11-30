@@ -224,7 +224,7 @@ function Death_Bet_OnEvent(self, event, ...)
 	--split arg1 (will be msg if from chat event)
 	local split1 = DBsplit(" ", arg1)
 	--if first val in split is !bet then add/adjust bet in arrays
-	if split1[1] == "!bet" then
+	if split1[1] == "!bet" and DBActive == 1 then
 		--Check for previous bet from player
 		for key,value in pairs(DeathBet['Player']) do
 			lastkey = key
@@ -276,7 +276,7 @@ function Death_Bet_OnEvent(self, event, ...)
 	end
 
 	--On boss encounter start, end betting
-	if event == "INSTANCE_ENCOUNTER_ENGAGE_UNIT" then
+	if event == "INSTANCE_ENCOUNTER_ENGAGE_UNIT" and DBActive == 1 then
 		START_command("end")
 	end
 
