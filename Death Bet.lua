@@ -2,7 +2,11 @@
 local PARTY_OR_RAID = bit.bor(COMBATLOG_OBJECT_AFFILIATION_PARTY,
 							  COMBATLOG_OBJECT_AFFILIATION_RAID)
 
-DeathBet = {['Bad'] = {}, ['Player'] = {}, ['Bet']={}};
+--Bad = player bet on
+--Player = player who made bet
+--Bet = bet player made
+--Raid = table to keep track of players in raid
+DeathBet = {['Bad'] = {}, ['Player'] = {}, ['Bet']={}, ['Raid']={}};
 
 
 function Death_Bet_OnMouseDown()
@@ -13,18 +17,30 @@ function Death_Bet_OnMouseUp()
 	Death_Bet_MainFrame:StopMovingOrSizing()
 end
 
+--Called on game startup
+--Listens for bets through whispers, guild chat, and channels
+--Listens for deaths through combat log
+--Listens for beginning of raid encounter to end betting
+--Starts on user's "/DB start" command
 function Death_Bet_OnLoad()
 	Death_Bet_MainFrame:RegisterEvent("CHAT_MSG_WHISPER")
 	Death_Bet_MainFrame:RegisterEvent("CHAT_MSG_GUILD")
 	Death_Bet_MainFrame:RegisterEvent("CHAT_MSG_CHANNEL")
 	Death_Bet_MainFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+	Death_Bet_MainFrame:RegisterEvent("INSTANCE_ENCOUNTER_ENGAGE_UNIT")
+	Death_Bet_MainFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 	SLASH_DB1 = "/DB";
 	DBActive = 0
 	SlashCmdList['DB'] = START_Command;
 	DEFAULT_CHAT_FRAME:AddMessage("LOADED UP!")
 end
 
+--Function to start certain instances of gambler
+--START = begin betting
+--END = end betting
+--CLEAR = print results and clear previous bets
 function START_Command(cmd)
+	--Start gambling
 	if cmd == "start" and DBActive == 0 then
 		local index = GetChannelName("MacheteGamble")
 		SendChatMessage("=======================","CHANNEL","ORCISH",index)
@@ -34,6 +50,8 @@ function START_Command(cmd)
 		SendChatMessage("whisper !help for more commands","CHANNEL","ORCISH",index)
 		SendChatMessage("=======================","CHANNEL","ORCISH",index)
 		DBActive = 1
+	--End gambling in preparation for fight
+	--Prints spread for gamblers
 	elseif cmd == "end" and DBActive == 1 then
 		local index = GetChannelName("MacheteGamble")
 		SendChatMessage("============================","CHANNEL","ORCISH",index)
@@ -42,11 +60,38 @@ function START_Command(cmd)
 		SendChatMessage("============================ ","CHANNEL","ORCISH",index)
 		DBActive = 2
 		DBSpread()
+	--Clear bets for next gambling round
+	--Whisper winners and losers amount needed to pay, if necessary
 	elseif cmd == "clear" then
 		DBSpread()
 		DBActive = 0
 	end
 		
+end
+
+--Function to remove bets from player
+--Used when player removed from raid or better removes bet completely
+function Remove_Bet(player)
+	local removekey = 0
+	for key,value in pairs(DeathBet['Player']) do
+		if value == player then
+			removekey = key
+		end
+	end
+	
+	if removekey ~= 0 then
+		table.remove(DeathBet['Player'], removekey)
+		table.remove(DeathBet['Bet'], removekey)
+		table.remove(DeathBet['Bad'], removekey)
+	end
+end
+
+--Function to refill Raid array with current members
+--Called on GROUP_ROSTER_UPDATE
+function DB_Fill_Raid()
+
+
+
 end
 
 function DBSpread()
@@ -55,7 +100,6 @@ function DBSpread()
 	
 	local Badcount = 0
 	local Badtotal = {}
-
 
 	for key,value in pairs(DeathBet['Bad']) do
 		local foundbad = 0
@@ -70,7 +114,8 @@ function DBSpread()
 			Badtotal[Badcount] = value	
 		end
 	end
-		
+	
+	
 	for key,value in pairs(Badtotal) do
 		local totalbets = 0
 		for key2,value2 in pairs(DeathBet['Bad']) do
@@ -83,16 +128,25 @@ function DBSpread()
 	end
 end
 
+--Handle events
+--Event 1 = Chat msgs to bet on a player
+--Event 2 = Watch combat log for deaths and discover first death
+--Event 3 = Watching for encounter start to end betting
+--Event 4 = Watch for group changes to adjust raid players array
 function Death_Bet_OnEvent(self, event, ...)
 	local arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9 = ...;
 	local lastkey = 0
 	local rebet = 0
+
+	if event == "GROUP_ROSTER_UPDATE" then
+		DB_Fill_Raid()
+	end
 	
-
-
-
+	--split arg1 (will be msg if from chat event)
 	local split1 = DBsplit(" ", arg1)
+	--if first val in split is !bet then add/adjust bet in arrays
 	if split1[1] == "!bet" then
+		--Check for previous bet from player
 		for key,value in pairs(DeathBet['Player']) do
 			lastkey = key
 			if value == arg2 then
@@ -100,6 +154,8 @@ function Death_Bet_OnEvent(self, event, ...)
 				rebet = key
 			end
 		end
+		--If player already bet then change their bet
+		--Otherwise add new bet
 		if rebet == 0 then
 			DeathBet['Player'][lastkey+1]=arg2
 			DeathBet['Bad'][lastkey+1]=strupper(split1[2])
@@ -108,23 +164,24 @@ function Death_Bet_OnEvent(self, event, ...)
 			DeathBet['Bad'][rebet]=strupper(split1[2])
 			DeathBet['Bet'][rebet]=split1[3]
 		end
-		
-		
 	end
 
-
-
-
-	
+	--Print players
 	if split1[1] == "!players" then
 		for key,value in pairs(DeathBet['Player']) do
 			DEFAULT_CHAT_FRAME:AddMessage(key .. " " .. value .. " "  .. DeathBet['Bad'][key] .. " " .. DeathBet['Bet'][key])
-
 		end
 	end
 	
-
-	if arg2 == "UNIT_DIED" and DBActive == 1 then
+	--Allows players to clear their own bet
+	if split1[1] == "!clear" and DBActive == 1 then
+		Remove_Bet( arg2 )
+	end
+	
+	--Watch combat log
+	--On unit death, check to see if its a player who was bet on and print payouts
+	--On boss death with no players who were bet on dieing, reset bets
+	if arg2 == "UNIT_DIED" and DBActive == 2 then
 		local index = GetChannelName("MacheteGamble")
 
 		for key,value in pairs(DeathBet['Bad']) do
@@ -133,22 +190,21 @@ function Death_Bet_OnEvent(self, event, ...)
 				DBActive = 0
 			end
 		end
-		
 	end
 
+	--On boss encounter start, end betting
+	if event == "INSTANCE_ENCOUNTER_ENGAGE_UNIT" then
+		START_command("end")
+	end
 
 	
 end
-
-
-
-
-
 
 function Death_Bet_Button_OnClick()
 	DEFAULT_CHAT_FRAME:AddMessage("Clicky")
 end
 
+--Function to split chat msgs
 function DBsplit(delimiter, text)
   local list = {}
   local pos = 1
