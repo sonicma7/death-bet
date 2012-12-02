@@ -7,7 +7,7 @@
 			<Anchor point="CENTER" />
 		</Anchors>
 		<Size>
-			<AbsDimension x="600" y="20" />
+			<AbsDimension x="600" y="200" />
 		</Size>
 		<Backdrop bgFile="Interface\Tooltips\UI-Tooltip-Background" tile="true">
 			<TileSize>
@@ -15,26 +15,64 @@
 			</TileSize>
 		</Backdrop>
 		<Frames>
-			<Button name="$parent_Button">
+			<Button name="$parent_Button_Start">
 				<Size>
-					<AbsDimension x="150" y="35" />
+					<AbsDimension x="200" y="100" />
 				</Size>
 				<Anchors>
 					<Anchor point="TOPLEFT">
 						<Offset>
-							<AbsDimension x="-30" y="6.5" />
+							<AbsDimension x="-15" y="30" />
 						</Offset>
 					</Anchor>
 				</Anchors>
-				<NormalTexture file="Interface\Minimap\TRACKING\OBJECTICONS">
-					<TexCoords left="0" right="0.125" top="0" bottom="0.5" />
+				<NormalTexture file="Interface\ACHIEVEMENTFRAME\UI-ACHIEVEMENT-HEADER">
+					<TexCoords left=".4" right=".69" top=".4" bottom="0.55" />
 				</NormalTexture>
-				<HighlightTexture file="Interface\Minimap\TRACKING\OBJECTICONS">
-					<TexCoords left="0.125" right="0.25" top="0" bottom="0.5" />
-				</HighlightTexture>
 				<Scripts>
 					<OnClick>
-						Death_Bet_Button_OnClick()
+						Death_Bet_Start_Button_OnClick()
+					</OnClick>
+				</Scripts>
+			</Button>
+			<Button name="$parent_Button_End">
+				<Size>
+					<AbsDimension x="200" y="100" />
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT">
+						<Offset>
+							<AbsDimension x="190" y="30" />
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<NormalTexture file="Interface\ACHIEVEMENTFRAME\UI-ACHIEVEMENT-HEADER">
+					<TexCoords left=".4" right=".69" top=".4" bottom="0.55" />
+				</NormalTexture>
+				<Scripts>
+					<OnClick>
+						Death_Bet_End_Button_OnClick()
+					</OnClick>
+				</Scripts>
+			</Button>
+			<Button name="$parent_Button_Announce"
+					ButtonText="BUS IS AWESOME">
+				<Size>
+					<AbsDimension x="200" y="100" />
+				</Size>
+				<Anchors>
+					<Anchor point="TOPLEFT">
+						<Offset>
+							<AbsDimension x="395" y="30" />
+						</Offset>
+					</Anchor>
+				</Anchors>
+				<NormalTexture file="Interface\ACHIEVEMENTFRAME\UI-ACHIEVEMENT-HEADER">
+					<TexCoords left=".4" right=".69" top=".4" bottom="0.55" />
+				</NormalTexture>
+				<Scripts>
+					<OnClick>
+						Death_Bet_Announce_Button_OnClick()
 					</OnClick>
 				</Scripts>
 			</Button>
@@ -44,16 +82,16 @@
 			<Layer level="ARTWORK">
 				<FontString name="$parent_GoldString"
 							inherits="SystemFont_Small"
-							text="BUS IS AWESOME"
+							text="BUS IS &#10; AWESOME"
 							justifyV="TOP"
-							justifyH="RIGHT">
+							justifyH="LEFT">
 					<Size>
-						<AbsDimension x="200" y="10" />
+						<AbsDimension x="200" y="100" />
 					</Size>
 					<Anchors>
 						<Anchor point="TOPLEFT">
 							<Offset>
-								<AbsDimension x="20" y="-5" />
+								<AbsDimension x="20" y="-75" />
 							</Offset>
 						</Anchor>
 					</Anchors>
