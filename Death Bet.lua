@@ -154,7 +154,7 @@ function DB_Fill_Raid()
 		if badfound == 0 then
 			local lastkey = 0
 			local badremfound = 0
-			for key3,value3 pairs(BadRemove) do
+			for key3,value3 in pairs(BadRemove) do
 				lastkey = key3
 				if value3 == value then
 					badremfound = 1
