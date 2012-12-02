@@ -7,8 +7,11 @@ local PARTY_OR_RAID = bit.bor(COMBATLOG_OBJECT_AFFILIATION_PARTY,
 --Bet = bet player made
 --Raid = table to keep track of players in raid
 DeathBet = {['Bad'] = {}, ['Player'] = {}, ['Bet']={}, ['Raid']={}};
+--Keep track of total bets on player for printout
+TotalBets = {['Bad'] = {}, ['Total'] = {}};
 --Keep raid count
 RaidMemberCount = 0;
+--Keep death count
 RaidDeathCount = 0;
 
 
@@ -36,6 +39,10 @@ function Death_Bet_OnLoad()
 	DBActive = 0
 	SlashCmdList['DB'] = START_Command;
 	DEFAULT_CHAT_FRAME:AddMessage("LOADED UP!")
+end
+
+function Send_Whisper(target, msg)
+	SendChatMessage(msg,"WHISPER","Orcish",target)
 end
 
 --Function to start certain instances of gambler
@@ -136,9 +143,12 @@ function Remove_Bet(player)
 	end
 	
 	if removekey ~= 0 then
+		Send_Whisper(DeathBet['Player'][removekey], "Bet placed for " .. DeathBet['Bet'][removekey] .. " on " .. DeathBet['Bad'][removekey] .. " has been removed.")
 		table.remove(DeathBet['Player'], removekey)
 		table.remove(DeathBet['Bet'], removekey)
 		table.remove(DeathBet['Bad'], removekey)
+	else
+		Send_Whisper(player, "No bet to clear.")
 	end
 end
 
@@ -164,6 +174,7 @@ function Remove_Bad(bad)
 	--Remove players bet on in reverse order since the table.remove function
 	--may fill in old key with next key thus making next removal wrong
 	for key,value in pairs(removekey) do
+		Send_Whisper(DeathBet['Player'][value], "Bet placed for " .. DeathBet['Bet'][value] .. " on " .. DeathBet['Bad'][value] .. " has been removed because they have left the raid.")
 		table.remove(DeathBet['Player'], tonumber(value))
 		table.remove(DeathBet['Bet'], tonumber(value))
 		table.remove(DeathBet['Bad'], tonumber(value))
@@ -296,37 +307,68 @@ function Death_Bet_OnEvent(self, event, ...)
 					--If player already bet then change their bet
 					--Otherwise add new bet
 					if rebet == 0 then
+						local betterInRaid = 0
 						--Check to make sure better is in raid
 						for key2,value2 in pairs(DeathBet['Raid']) do
 							if better == value2 then
+								betterInRaid = 1
 								--Check to make sure bettee is in raid
+								local betteeInRaid = 0
 								for key,value in pairs(DeathBet['Raid']) do
 									if strupper(split1[2]) == value then
+										betteeInRaid = 1
+										Send_Whisper(arg2, "Bet placed for " .. DBround(tonumber(split1[3])) .. " on " .. strupper(split1[2]) .. ".")
 										DeathBet['Player'][lastkey+1]=arg2
 										DeathBet['Bad'][lastkey+1]=strupper(split1[2])
 										DeathBet['Bet'][lastkey+1]=DBround(tonumber(split1[3]))
 									end
 								end
+								--Error for bettee not in raid
+								if betteeInRaid == 0 then
+									Send_Whisper(arg2, "Person whom you bet on is not in raid!")
+								end
 							end
 						end
+						--Error for better not in raid
+						if betterInRaid == 0 then
+							Send_Whisper(arg2, "You are not in raid!")
+						end
 					else
+						Send_Whisper(arg2, "Bet changed from " .. DeathBet['Bet'][rebet] .. " on " .. DeathBet['Bad'][rebet] .. " to " .. DBround(tonumber(split1[3])) .. " on " .. strupper(split1[2]) .. ".")
 						DeathBet['Bad'][rebet]=strupper(split1[2])
 						DeathBet['Bet'][rebet]=DBround(tonumber(split1[3]))
 					end
+				else
+					--Error for bad bet value
+					Send_Whisper(arg2, "Not a valid bet!")
 				end
+			else
+				--Error for betting on self
+				Send_Whisper(arg2, "Can not bet on yourself!")
 			end
 		end
 
 	--Print players
 		if split1[1] == "!players" then
+			local hasBets = 0
 			for key,value in pairs(DeathBet['Player']) do
-				DEFAULT_CHAT_FRAME:AddMessage(key .. " " .. value .. " "  .. DeathBet['Bad'][key] .. " " .. DeathBet['Bet'][key])
+				hasBets = 1
+				--Send whisper for totals in future
+				Send_Whisper(arg2, DeathBet['Bad'][key] .. " " .. DeathBet['Bet'][key])
+				--DEFAULT_CHAT_FRAME:AddMessage(key .. " " .. value .. " "  .. DeathBet['Bad'][key] .. " " .. DeathBet['Bet'][key])
+			end
+			if hasBets == 0 then
+				Send_Whisper(arg2, "No bets have been placed.")
 			end
 		end
 	
 		--Allows players to clear their own bet
 		if split1[1] == "!clear" and DBActive == 1 then
 			Remove_Bet( arg2 )
+		elseif split1[1] == "!clear" and DBActive == 2 then
+			Send_Whisper(arg2, "Can not remove bet while encounter is in progress...cheater!")
+		elseif split1[1] == "!clear" and DBActive == 0 then
+			Send_Whisper(arg2, "No bet to clear.")
 		end
 	
 		--Watch combat log
