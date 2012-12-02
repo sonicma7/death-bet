@@ -56,7 +56,7 @@ function START_Command(cmd)
 		local index = GetChannelName("MacheteGamble")
 		SendChatMessage("=======================","CHANNEL","ORCISH",index)
 		SendChatMessage("Betting has started ","CHANNEL","ORCISH",index)
-		SendChatMessage("!bet name gold ","CHANNEL","ORCISH",index)
+		SendChatMessage(" !bet name gold ","CHANNEL","ORCISH",index)
 		SendChatMessage("ex. !bet Eibon 500","CHANNEL","ORCISH",index)
 		SendChatMessage("whisper !help for more commands","CHANNEL","ORCISH",index)
 		SendChatMessage("=======================","CHANNEL","ORCISH",index)
@@ -96,10 +96,6 @@ function DBClear()
 	RaidDeathCount = 0;
 end
 
---Function to calculate payouts
-function DBPayout(loser)
-	
-end
 
 --[[
 function Auto_Command(cmd)
@@ -409,17 +405,30 @@ function Death_Bet_OnEvent(self, event, ...)
 	GUIUpdate()
 end
 
+
+--[[
+GUI BUTTON FUNCTIONS: 
+START: Starts betting
+END: Force betting to end, normally automatically ended when combat starts
+Announce: Announces the spread to channel.
+Clear: Force clears all bets.
+]]--
 function Death_Bet_Start_Button_OnClick()
-        DEFAULT_CHAT_FRAME:AddMessage("Start")
+        START_Command("start")
 end
 
 function Death_Bet_End_Button_OnClick()
-        DEFAULT_CHAT_FRAME:AddMessage("End")
+        START_Command("end")
 end
 
 function Death_Bet_Announce_Button_OnClick()
-        DEFAULT_CHAT_FRAME:AddMessage("Announce")
+        DBSpread()
 end
+
+function Death_Bet_Clear_Button_OnClick()
+        START_Command("clear")
+end
+
 
 --Function to update the GUI with the current spread information, called after any event
 function GUIUpdate()
@@ -480,4 +489,78 @@ function DBsplit(delimiter, text)
     end
   end
   return list
+end
+
+
+--[[
+****In Developement****
+Function will take a string of the person who died(post checking if valid for payouts) and whisper all nessiary actions for payouts.
+]]--
+
+function DBPayout(loser)
+
+--[[winners[]
+Name: Winner players name
+Bet : Bet Winner placed
+Portion: Portion of total bet against loser winner bet (winners bet)/(total winning bets)
+Payout: table for winnings payout(money received)
+	Player: Loser player name
+	Amount: Amount owed to winner
+]]--
+local winners = {['Name'] = {}, ['Bet'] = {}, ['Portion']={}, ['Payout']={ ['Player'] = {}, ['Amount']={}}}
+local winnersindex = 0
+
+--[[ losers[]
+Name: Loser player Name
+Bet : Bet loser placed
+Payout: table for payouts
+	Player: Winner player name
+	Amount: Amount owed to that player
+]]--
+local losers={['Name'] = {}, ['Bet'] = {}, ['Payout']={['Player'] = {}, ['Amount']={}}}
+local losersindex = 0
+
+
+--Populate winners and losers table
+for key,value in pairs(DeathBet['Bad']) do
+	if value == loser then
+		winnersindex = winnersindex + 1
+		winners['Name'][winnersindex]= DeathBet['Players'][key]
+		winners['Name'][winnersindex]= DeathBet['Bet'][key]
+	else
+		losersindex = loserindex + 1
+		losers['Name'][losersindex]= DeathBet['Players'][key]
+		losers['Name'][losersindex]= DeathBet['Bet'][key]
+	end
+end
+
+--Calulate and populate Portion for winners table
+local totalbets = 0
+for key,value in pairs(winners['Bet']) do
+	totalbets = totalbets + value
+end
+
+for key,value in pairs(winners['Bet']) do
+	winners['Portion'][key] = winners['Bet']/totalbets
+end
+
+--Calculate and populate Payout tables
+for key,value in pairs(losers['Name']) do
+	local Payoutindex = 0
+	for key2,value2 in pairs(winners['Name']) do
+		Payoutindex = Payoutindex + 1
+		if losers['Bet'][key] < winners['Bet'][key2] then
+			losers['Payout']['Name'][Payoutindex] = value2	--value2 = winners['Name']
+			losers['Payout']['Amount'][Payoutindex]=losers['Bet'][key]*winners['Portion']
+		else
+			losers['Payout']['Name'][Payoutindex] = value2	--value2 = winners['Name']
+			losers['Payout']['Amount'][Payoutindex]=winners['Bet'][key2]*winners['Portion']
+		end
+	end
+
+
+end
+
+
+
 end
