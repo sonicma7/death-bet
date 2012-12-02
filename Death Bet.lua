@@ -222,55 +222,57 @@ function Death_Bet_OnEvent(self, event, ...)
 	end
 	
 	--split arg1 (will be msg if from chat event)
-	local split1 = DBsplit(" ", arg1)
-	--if first val in split is !bet then add/adjust bet in arrays
-	if split1[1] == "!bet" and DBActive == 1 then
-		--Check for previous bet from player
-		for key,value in pairs(DeathBet['Player']) do
-			lastkey = key
-			if value == arg2 then
-				DEFAULT_CHAT_FRAME:AddMessage(key)
-				rebet = key
-			end
-		end
-		--If player already bet then change their bet
-		--Otherwise add new bet
-		if rebet == 0 then
-			for key,value in pairs(DeathBet['Raid']) do
-				if strupper(split1[2]) == value then
-					DeathBet['Player'][lastkey+1]=arg2
-					DeathBet['Bad'][lastkey+1]=strupper(split1[2])
-					DeathBet['Bet'][lastkey+1]=split1[3]
+	if event ~= "GROUP_ROSTER_UPDATE" then
+		local split1 = DBsplit(" ", arg1)
+		--if first val in split is !bet then add/adjust bet in arrays
+		if split1[1] == "!bet" and DBActive == 1 then
+			--Check for previous bet from player
+			for key,value in pairs(DeathBet['Player']) do
+				lastkey = key
+				if value == arg2 then
+					DEFAULT_CHAT_FRAME:AddMessage(key)
+					rebet = key
 				end
 			end
-		else
-			DeathBet['Bad'][rebet]=strupper(split1[2])
-			DeathBet['Bet'][rebet]=split1[3]
+			--If player already bet then change their bet
+			--Otherwise add new bet
+			if rebet == 0 then
+				for key,value in pairs(DeathBet['Raid']) do
+					if strupper(split1[2]) == value then
+						DeathBet['Player'][lastkey+1]=arg2
+						DeathBet['Bad'][lastkey+1]=strupper(split1[2])
+						DeathBet['Bet'][lastkey+1]=split1[3]
+					end
+				end
+			else
+				DeathBet['Bad'][rebet]=strupper(split1[2])
+				DeathBet['Bet'][rebet]=split1[3]
+			end
 		end
-	end
 
 	--Print players
-	if split1[1] == "!players" then
-		for key,value in pairs(DeathBet['Player']) do
-			DEFAULT_CHAT_FRAME:AddMessage(key .. " " .. value .. " "  .. DeathBet['Bad'][key] .. " " .. DeathBet['Bet'][key])
+		if split1[1] == "!players" then
+			for key,value in pairs(DeathBet['Player']) do
+				DEFAULT_CHAT_FRAME:AddMessage(key .. " " .. value .. " "  .. DeathBet['Bad'][key] .. " " .. DeathBet['Bet'][key])
+			end
 		end
-	end
 	
-	--Allows players to clear their own bet
-	if split1[1] == "!clear" and DBActive == 1 then
-		Remove_Bet( arg2 )
-	end
+		--Allows players to clear their own bet
+		if split1[1] == "!clear" and DBActive == 1 then
+			Remove_Bet( arg2 )
+		end
 	
-	--Watch combat log
-	--On unit death, check to see if its a player who was bet on and print payouts
-	--On boss death with no players who were bet on dieing, reset bets
-	if arg2 == "UNIT_DIED" and DBActive == 2 then
-		local index = GetChannelName("MacheteGamble")
+		--Watch combat log
+		--On unit death, check to see if its a player who was bet on and print payouts
+		--On boss death with no players who were bet on dieing, reset bets
+		if arg2 == "UNIT_DIED" and DBActive == 2 then
+			local index = GetChannelName("MacheteGamble")
 
-		for key,value in pairs(DeathBet['Bad']) do
-			if strupper(arg9) == strupper(value) then
-				SendChatMessage(value .. " death, Payout: " .. DeathBet['Player'][key] .. " +###","CHANNEL","ORCISH",index)
-				DBActive = 0
+			for key,value in pairs(DeathBet['Bad']) do
+				if strupper(arg9) == strupper(value) then
+					SendChatMessage(value .. " death, Payout: " .. DeathBet['Player'][key] .. " +###","CHANNEL","ORCISH",index)
+					DBActive = 0
+				end
 			end
 		end
 	end
