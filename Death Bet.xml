@@ -126,7 +126,7 @@
 						</NormalTexture>
 						<Scripts>
 							<OnClick>
-								Death_Bet_Announce_Button_OnClick()
+								Death_Bet_Clear_Button_OnClick()
 							</OnClick>
 						</Scripts>
 					</Button>
