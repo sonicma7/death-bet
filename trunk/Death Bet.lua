@@ -69,8 +69,38 @@ function START_Command(cmd)
 		DBSpread()
 		DBActive = 0
 	end
-		
 end
+
+--[[
+function Auto_Command(cmd)
+	--Start gambling
+	if cmd == "start" and DBActive == 0 then
+		DB_Fill_Raid()
+		local index = GetChannelName("MacheteGamble")
+		SendChatMessage("=======================","CHANNEL","ORCISH",index)
+		SendChatMessage("Betting has started ","CHANNEL","ORCISH",index)
+		SendChatMessage("!bet name gold ","CHANNEL","ORCISH",index)
+		SendChatMessage("ex. !bet Eibon 500","CHANNEL","ORCISH",index)
+		SendChatMessage("whisper !help for more commands","CHANNEL","ORCISH",index)
+		SendChatMessage("=======================","CHANNEL","ORCISH",index)
+		DBActive = 1
+	--End gambling in preparation for fight
+	--Prints spread for gamblers
+	elseif cmd == "end" and DBActive == 1 then
+		local index = GetChannelName("MacheteGamble")
+		SendChatMessage("============================","CHANNEL","ORCISH",index)
+		SendChatMessage("Betting ended ","CHANNEL","ORCISH",index)
+		SendChatMessage("!odds to see possible payout ","CHANNEL","ORCISH",index)
+		SendChatMessage("============================ ","CHANNEL","ORCISH",index)
+		DBActive = 2
+		DBSpread()
+	--Clear bets for next gambling round
+	--Whisper winners and losers amount needed to pay, if necessary
+	elseif cmd == "clear" then
+		DBSpread()
+		DBActive = 0
+	end
+end --]]
 
 --Function to remove bets from player
 --Used when player removed from raid or better removes bet completely
@@ -222,7 +252,7 @@ function Death_Bet_OnEvent(self, event, ...)
 	end
 	
 	--split arg1 (will be msg if from chat event)
-	if event ~= "GROUP_ROSTER_UPDATE" then
+	if event ~= "GROUP_ROSTER_UPDATE" and event ~= "INSTANCE_ENCOUNTER_ENGAGE_UNIT" then
 		local split1 = DBsplit(" ", arg1)
 		--if first val in split is !bet then add/adjust bet in arrays
 		if split1[1] == "!bet" and DBActive == 1 then
@@ -278,12 +308,57 @@ function Death_Bet_OnEvent(self, event, ...)
 
 	--On boss encounter start, end betting
 	if event == "INSTANCE_ENCOUNTER_ENGAGE_UNIT" and DBActive == 1 then
-		START_command("end")
-	end	
+		START_Command("end")
+	end
+	
+	GUIUpdate()
 end
 
-function Death_Bet_Button_OnClick()
-	DEFAULT_CHAT_FRAME:AddMessage("Clicky")
+function Death_Bet_Start_Button_OnClick()
+        DEFAULT_CHAT_FRAME:AddMessage("Start")
+end
+
+function Death_Bet_End_Button_OnClick()
+        DEFAULT_CHAT_FRAME:AddMessage("End")
+end
+
+function Death_Bet_Announce_Button_OnClick()
+        DEFAULT_CHAT_FRAME:AddMessage("Announce")
+end
+
+--Function to update the GUI with the current spread information, called after any event
+function GUIUpdate()
+
+        local Badcount = 0
+        local Badtotal = {}
+        local outputstring = "Spread:\n"
+
+        for key,value in pairs(DeathBet['Bad']) do
+                local foundbad = 0
+                for badkey,badval in pairs(Badtotal) do
+                        if badval == value then
+                                foundbad = 1
+                        end
+                end
+
+                if foundbad == 0 then
+                        Badcount = Badcount + 1
+                        Badtotal[Badcount] = value      
+                end
+        end
+                
+        for key,value in pairs(Badtotal) do
+                local totalbets = 0
+                for key2,value2 in pairs(DeathBet['Bad']) do
+                        if value2 == value then
+                                totalbets = totalbets + DeathBet['Bet'][key2]
+                        end 
+                end
+                outputstring = outputstring .. value .. " " .. totalbets .. "\n"
+
+        end
+        Death_Bet_MainFrame_GoldString:SetText(outputstring)
+
 end
 
 --Function to split chat msgs
