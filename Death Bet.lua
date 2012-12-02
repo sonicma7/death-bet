@@ -9,6 +9,7 @@ local PARTY_OR_RAID = bit.bor(COMBATLOG_OBJECT_AFFILIATION_PARTY,
 DeathBet = {['Bad'] = {}, ['Player'] = {}, ['Bet']={}, ['Raid']={}};
 --Keep raid count
 RaidMemberCount = 0;
+RaidDeathCount = 0;
 
 
 function Death_Bet_OnMouseDown()
@@ -66,9 +67,31 @@ function START_Command(cmd)
 	--Clear bets for next gambling round
 	--Whisper winners and losers amount needed to pay, if necessary
 	elseif cmd == "clear" then
-		DBSpread()
+		DBClear()
 		DBActive = 0
 	end
+end
+
+--Function to clear everything and reset addon
+function DBClear()
+	for k in pairs(DeathBet['Player']) do
+		DeathBet['Player'][k] = nil
+	end
+	
+	for k in pairs(DeathBet['Bad']) do
+		DeathBet['Bad'][k] = nil
+	end
+	
+	for k in pairs(DeathBet['Bet']) do
+		DeathBet['Bet'][k] = nil
+	end
+	
+	RaidDeathCount = 0;
+end
+
+--Function to calculate payouts
+function DBPayout(loser)
+	
 end
 
 --[[
@@ -256,26 +279,41 @@ function Death_Bet_OnEvent(self, event, ...)
 		local split1 = DBsplit(" ", arg1)
 		--if first val in split is !bet then add/adjust bet in arrays
 		if split1[1] == "!bet" and DBActive == 1 then
-			--Check for previous bet from player
-			for key,value in pairs(DeathBet['Player']) do
-				lastkey = key
-				if value == arg2 then
-					rebet = key
-				end
-			end
-			--If player already bet then change their bet
-			--Otherwise add new bet
-			if rebet == 0 then
-				for key,value in pairs(DeathBet['Raid']) do
-					if strupper(split1[2]) == value then
-						DeathBet['Player'][lastkey+1]=arg2
-						DeathBet['Bad'][lastkey+1]=strupper(split1[2])
-						DeathBet['Bet'][lastkey+1]=split1[3]
+			local better = strupper(arg2)
+			local bettee = strupper(split1[2])
+			--Check to make sure better is not betting on self
+			if bettee ~= better then
+				--Check to make sure bet is a number
+				local testbet = tonumber(split1[3])
+				if testbet ~= nil and DBround(testbet) > 0 then
+					--Check for previous bet from player
+					for key,value in pairs(DeathBet['Player']) do
+						lastkey = key
+						if value == arg2 then
+							rebet = key
+						end
+					end
+					--If player already bet then change their bet
+					--Otherwise add new bet
+					if rebet == 0 then
+						--Check to make sure better is in raid
+						for key2,value2 in pairs(DeathBet['Raid']) do
+							if better == value2 then
+								--Check to make sure bettee is in raid
+								for key,value in pairs(DeathBet['Raid']) do
+									if strupper(split1[2]) == value then
+										DeathBet['Player'][lastkey+1]=arg2
+										DeathBet['Bad'][lastkey+1]=strupper(split1[2])
+										DeathBet['Bet'][lastkey+1]=DBround(tonumber(split1[3]))
+									end
+								end
+							end
+						end
+					else
+						DeathBet['Bad'][rebet]=strupper(split1[2])
+						DeathBet['Bet'][rebet]=DBround(tonumber(split1[3]))
 					end
 				end
-			else
-				DeathBet['Bad'][rebet]=strupper(split1[2])
-				DeathBet['Bet'][rebet]=split1[3]
 			end
 		end
 
@@ -297,10 +335,24 @@ function Death_Bet_OnEvent(self, event, ...)
 		if arg2 == "UNIT_DIED" and DBActive == 2 then
 			local index = GetChannelName("MacheteGamble")
 
-			for key,value in pairs(DeathBet['Bad']) do
-				if strupper(arg9) == strupper(value) then
-					SendChatMessage(value .. " death, Payout: " .. DeathBet['Player'][key] .. " +###","CHANNEL","ORCISH",index)
-					DBActive = 0
+			for key2,value2 in pairs(DeathBet['Raid']) do
+				if strupper(arg9) == strupper(value2) then
+					local deathcheck = 0
+					for key,value in pairs(DeathBet['Bad']) do
+						if strupper(arg9) == strupper(value) and RaidDeathCount == 0 then
+							if deathcheck == 0 then
+								SendChatMessage(arg9 .. " death.","CHANNEL","ORCISH",index)
+							end
+							deathcheck = 1
+							DBPayout(strupper(arg9))
+							START_Command("clear")
+						end
+					end
+					
+					if deathcheck == 0 then
+						SendChatMessage(arg9 .. " death. No winners.","CHANNEL","ORCISH",index)
+						START_Command("clear")
+					end
 				end
 			end
 		end
@@ -311,6 +363,7 @@ function Death_Bet_OnEvent(self, event, ...)
 		START_Command("end")
 	end
 	
+	--Update GUI with bets or changes
 	GUIUpdate()
 end
 
@@ -359,6 +412,12 @@ function GUIUpdate()
         end
         Death_Bet_MainFrame_GoldString:SetText(outputstring)
 
+end
+
+--Function to round numbers
+function DBround(num, idp)
+	local mult = 10^(idp or 0)
+	return math.floor(num * mult + 0.5) / mult
 end
 
 --Function to split chat msgs
