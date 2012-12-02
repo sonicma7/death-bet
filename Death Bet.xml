@@ -28,7 +28,7 @@
 							</FontHeight>
 						</ButtonText>
 						<Size>
-							<AbsDimension x="200" y="100" />
+							<AbsDimension x="150" y="100" />
 						</Size>
 						<Anchors>
 							<Anchor point="TOPLEFT">
@@ -56,12 +56,12 @@
 							</FontHeight>
 						</ButtonText>
 						<Size>
-							<AbsDimension x="200" y="100" />
+							<AbsDimension x="150" y="100" />
 						</Size>
 						<Anchors>
 							<Anchor point="TOPLEFT">
 								<Offset>
-									<AbsDimension x="190" y="30" />
+									<AbsDimension x="140" y="30" />
 								</Offset>
 							</Anchor>
 						</Anchors>
@@ -84,12 +84,12 @@
 							</FontHeight>
 						</ButtonText>
 						<Size>
-							<AbsDimension x="200" y="100" />
+							<AbsDimension x="150" y="100" />
 						</Size>
 						<Anchors>
 							<Anchor point="TOPLEFT">
 								<Offset>
-									<AbsDimension x="395" y="30" />
+									<AbsDimension x="295" y="30" />
 								</Offset>
 							</Anchor>
 						</Anchors>
@@ -102,7 +102,34 @@
 							</OnClick>
 						</Scripts>
 					</Button>
-				
+					<Button name="$parent_Button_Clear">
+						<ButtonText name="$parent_Announce_Text" inherits="GameFontHighlight" text = "Clear">
+							<Anchors>
+								<Anchor point="CENTER"/>
+							</Anchors>
+							<FontHeight>
+								<AbsValue val="20"/>
+							</FontHeight>
+						</ButtonText>
+						<Size>
+							<AbsDimension x="150" y="100" />
+						</Size>
+						<Anchors>
+							<Anchor point="TOPLEFT">
+								<Offset>
+									<AbsDimension x="450" y="30" />
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<NormalTexture file="Interface\ACHIEVEMENTFRAME\UI-ACHIEVEMENT-HEADER">
+							<TexCoords left=".4" right=".69" top=".4" bottom="0.55" />
+						</NormalTexture>
+						<Scripts>
+							<OnClick>
+								Death_Bet_Announce_Button_OnClick()
+							</OnClick>
+						</Scripts>
+					</Button>
 					
 				</Frames>
 		<!--
