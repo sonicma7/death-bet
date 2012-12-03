@@ -13,6 +13,8 @@ TotalBets = {['Bad'] = {}, ['Total'] = {}};
 RaidMemberCount = 0;
 --Keep death count
 RaidDeathCount = 0;
+--Bool to check for bets
+hasBets = 0;
 
 
 function Death_Bet_OnMouseDown()
@@ -52,6 +54,7 @@ end
 function START_Command(cmd)
 	--Start gambling
 	if cmd == "start" and DBActive == 0 then
+		DBClear()
 		DB_Fill_Raid()
 		local index = GetChannelName("MacheteGamble")
 		SendChatMessage("=======================","CHANNEL","ORCISH",index)
@@ -70,7 +73,8 @@ function START_Command(cmd)
 		SendChatMessage("!odds to see possible payout ","CHANNEL","ORCISH",index)
 		SendChatMessage("============================ ","CHANNEL","ORCISH",index)
 		DBActive = 2
-		DBSpread()
+		Calc_DB_Totals()
+		DBSpread("Gamble", nil)
 	--Clear bets for next gambling round
 	--Whisper winners and losers amount needed to pay, if necessary
 	elseif cmd == "clear" then
@@ -83,17 +87,17 @@ end
 function DBClear()
 	for k in pairs(DeathBet['Player']) do
 		DeathBet['Player'][k] = nil
-	end
-	
-	for k in pairs(DeathBet['Bad']) do
 		DeathBet['Bad'][k] = nil
-	end
-	
-	for k in pairs(DeathBet['Bet']) do
 		DeathBet['Bet'][k] = nil
 	end
 	
-	RaidDeathCount = 0;
+	for k in pairs(TotalBets['Bad']) do
+		TotalBets['Bad'][k] = nil
+		TotalBets['Total'][k] = nil
+	end
+	
+	RaidDeathCount = 0
+	hasBets = 0
 end
 
 
@@ -143,6 +147,7 @@ function Remove_Bet(player)
 		table.remove(DeathBet['Player'], removekey)
 		table.remove(DeathBet['Bet'], removekey)
 		table.remove(DeathBet['Bad'], removekey)
+		Calc_DB_Totals()
 	else
 		Send_Whisper(player, "No bet to clear.")
 	end
@@ -175,6 +180,8 @@ function Remove_Bad(bad)
 		table.remove(DeathBet['Bet'], tonumber(value))
 		table.remove(DeathBet['Bad'], tonumber(value))
 	end
+	
+	Calc_DB_Totals()
 end
 		
 		
@@ -226,6 +233,16 @@ function DB_Fill_Raid()
 			end
 		end
 	end
+	
+	--Check for bets placed by player who is no longer in raid
+	for key,value in pairs(DeathBet['Player']) do
+		local badfound = 0
+		for key2,value2 in pairs(DeathBet['Raid']) do
+			if value == value2 then
+				Remove_Bet(value)
+			end
+		end
+	end
 
 	--For all people on list call function to remove them
 	for key,value in pairs(BadRemove) do
@@ -233,16 +250,19 @@ function DB_Fill_Raid()
 	end
 end
 
-function DBSpread()
-	local index = GetChannelName("MacheteGamble")
-	SendChatMessage("Spread:","CHANNEL","ORCISH",index)
+function Calc_DB_Totals()
+	--Clear totals so they can be refilled
+	for k in pairs(TotalBets['Bad']) do
+		TotalBets['Bad'][k] = nil
+		TotalBets['Total'][k] = nil
+	end
 	
 	local Badcount = 0
-	local Badtotal = {}
-
+	
 	for key,value in pairs(DeathBet['Bad']) do
 		local foundbad = 0
-		for badkey,badval in pairs(Badtotal) do
+		for badkey,badval in pairs(TotalBets['Bad']) do
+			Badcount = badkey
 			if badval == value then
 				foundbad = 1
 			end
@@ -250,21 +270,57 @@ function DBSpread()
 
 		if foundbad == 0 then
 			Badcount = Badcount + 1
-			Badtotal[Badcount] = value	
+			TotalBets['Bad'][Badcount] = value
+			TotalBets['Total'][Badcount] = 0
 		end
 	end
 	
 	
-	for key,value in pairs(Badtotal) do
+	for key,value in pairs(TotalBets['Bad']) do
 		local totalbets = 0
 		for key2,value2 in pairs(DeathBet['Bad']) do
 			if value2 == value then
-				totalbets = totalbets + DeathBet['Bet'][key2]
+				TotalBets['Total'][key] = TotalBets['Total'][key] + DeathBet['Bet'][key2]
 			end 
 		end
-		SendChatMessage(value .. " " .. totalbets,"CHANNEL","ORCISH",index)
-
 	end
+	
+end
+
+function Addto_DB_Totals(bad, bet)
+	local foundbad = 0
+	local lastkey = 0
+	
+	for key,value in pairs(TotalBets['Bad']) do
+		lastkey = key
+		if bad == value then
+			TotalBets['Total'][key] = TotalBets['Total'][key] + bet
+			foundbad = 1
+		end
+	end
+	
+	if foundbad == 0 then
+		TotalBets['Bad'][lastkey + 1] = bad
+		TotalBets['Total'][lastkey + 1] = bet
+	end
+	
+	hasBets = 1
+end
+
+function DBSpread(channel, person)
+	local index = GetChannelName("MacheteGamble")
+	if channel ~= "Whisper" then
+		SendChatMessage("Spread:","CHANNEL","ORCISH",index)
+	end
+	
+	for key,value in pairs(TotalBets['Bad']) do
+		if channel == "Whisper" then
+			Send_Whisper(person, key .. ". " .. value .. " " ..  TotalBets['Total'][key])
+		else
+			SendChatMessage(key .. ". " .. value .. " " .. TotalBets['Total'][key],"CHANNEL","ORCISH",index)
+		end
+	end
+
 end
 
 --Handle events
@@ -317,6 +373,7 @@ function Death_Bet_OnEvent(self, event, ...)
 										DeathBet['Player'][lastkey+1]=arg2
 										DeathBet['Bad'][lastkey+1]=strupper(split1[2])
 										DeathBet['Bet'][lastkey+1]=DBround(tonumber(split1[3]))
+										Addto_DB_Totals(DeathBet['Bad'][lastkey+1], DeathBet['Bet'][lastkey+1])
 									end
 								end
 								--Error for bettee not in raid
@@ -330,9 +387,20 @@ function Death_Bet_OnEvent(self, event, ...)
 							Send_Whisper(arg2, "You are not in raid!")
 						end
 					else
-						Send_Whisper(arg2, "Bet changed from " .. DeathBet['Bet'][rebet] .. " on " .. DeathBet['Bad'][rebet] .. " to " .. DBround(tonumber(split1[3])) .. " on " .. strupper(split1[2]) .. ".")
-						DeathBet['Bad'][rebet]=strupper(split1[2])
-						DeathBet['Bet'][rebet]=DBround(tonumber(split1[3]))
+						local betteeInRaid = 0
+						for key,value in pairs(DeathBet['Raid']) do
+							if strupper(split1[2]) == value then
+								betteeInRaid = 1
+								Send_Whisper(arg2, "Bet changed from " .. DeathBet['Bet'][rebet] .. " on " .. DeathBet['Bad'][rebet] .. " to " .. DBround(tonumber(split1[3])) .. " on " .. strupper(split1[2]) .. ".")
+								DeathBet['Bad'][rebet]=strupper(split1[2])
+								DeathBet['Bet'][rebet]=DBround(tonumber(split1[3]))
+								Calc_DB_Totals()
+							end
+						end
+						
+						if betteeInRaid == 0 then
+							Send_Whisper(arg2, "Person whom you bet on is not in raid! Original bet still in place.")
+						end
 					end
 				else
 					--Error for bad bet value
@@ -346,15 +414,10 @@ function Death_Bet_OnEvent(self, event, ...)
 
 	--Print players
 		if split1[1] == "!players" then
-			local hasBets = 0
-			for key,value in pairs(DeathBet['Player']) do
-				hasBets = 1
-				--Send whisper for totals in future
-				Send_Whisper(arg2, DeathBet['Bad'][key] .. " " .. DeathBet['Bet'][key])
-				--DEFAULT_CHAT_FRAME:AddMessage(key .. " " .. value .. " "  .. DeathBet['Bad'][key] .. " " .. DeathBet['Bet'][key])
-			end
 			if hasBets == 0 then
 				Send_Whisper(arg2, "No bets have been placed.")
+			else
+				DBSpread("Whisper", arg2)
 			end
 		end
 	
@@ -422,7 +485,7 @@ function Death_Bet_End_Button_OnClick()
 end
 
 function Death_Bet_Announce_Button_OnClick()
-        DBSpread()
+        DBSpread("Gamble", nil)
 end
 
 function Death_Bet_Clear_Button_OnClick()
@@ -432,37 +495,25 @@ end
 
 --Function to update the GUI with the current spread information, called after any event
 function GUIUpdate()
+	local outputstring = ""
 
-        local Badcount = 0
-        local Badtotal = {}
-        local outputstring = "Spread:\n"
+	if DBActive == 0 then
+		outputstring = "Death Bet has not been started\n"
+	elseif DBActive == 1 or DBActive == 2 then
+		if DBActive == 1 then
+			outputstring = "CURRENTLY BETTING\n\n"
+		else
+			outputstring = "BETTING DONE\n\n"
+		end
+			
+		outputstring = outputstring .. "Spread:\n"
 
-        for key,value in pairs(DeathBet['Bad']) do
-                local foundbad = 0
-                for badkey,badval in pairs(Badtotal) do
-                        if badval == value then
-                                foundbad = 1
-                        end
-                end
-
-                if foundbad == 0 then
-                        Badcount = Badcount + 1
-                        Badtotal[Badcount] = value      
-                end
-        end
-                
-        for key,value in pairs(Badtotal) do
-                local totalbets = 0
-                for key2,value2 in pairs(DeathBet['Bad']) do
-                        if value2 == value then
-                                totalbets = totalbets + DeathBet['Bet'][key2]
-                        end 
-                end
-                outputstring = outputstring .. value .. " " .. totalbets .. "\n"
-
-        end
-        Death_Bet_MainFrame_GoldString:SetText(outputstring)
-
+		for key,value in pairs(TotalBets['Bad']) do
+			outputstring = outputstring .. value .. " " .. TotalBets['Total'][key] .. "\n"
+		end
+	end
+	
+	Death_Bet_MainFrame_GoldString:SetText(outputstring)
 end
 
 --Function to round numbers
@@ -499,68 +550,64 @@ Function will take a string of the person who died(post checking if valid for pa
 
 function DBPayout(loser)
 
---[[winners[]
-Name: Winner players name
-Bet : Bet Winner placed
-Portion: Portion of total bet against loser winner bet (winners bet)/(total winning bets)
-Payout: table for winnings payout(money received)
+	--[[winners[]
+	Name: Winner players name
+	Bet : Bet Winner placed
+	Portion: Portion of total bet against loser winner bet (winners bet)/(total winning bets)
+	Payout: table for winnings payout(money received)
 	Player: Loser player name
 	Amount: Amount owed to winner
-]]--
-local winners = {['Name'] = {}, ['Bet'] = {}, ['Portion']={}, ['Payout']={ ['Player'] = {}, ['Amount']={}}}
-local winnersindex = 0
+	]]--
+	local winners = {['Name'] = {}, ['Bet'] = {}, ['Portion']={}, ['Payout']={ ['Player'] = {}, ['Amount']={}}}
+	local winnersindex = 0
 
---[[ losers[]
-Name: Loser player Name
-Bet : Bet loser placed
-Payout: table for payouts
+	--[[ losers[]
+	Name: Loser player Name
+	Bet : Bet loser placed
+	Payout: table for payouts
 	Player: Winner player name
 	Amount: Amount owed to that player
-]]--
-local losers={['Name'] = {}, ['Bet'] = {}, ['Payout']={['Player'] = {}, ['Amount']={}}}
-local losersindex = 0
+	]]--
+	local losers={['Name'] = {}, ['Bet'] = {}, ['Payout']={['Player'] = {}, ['Amount']={}}}
+	local losersindex = 0
 
 
---Populate winners and losers table
-for key,value in pairs(DeathBet['Bad']) do
-	if value == loser then
-		winnersindex = winnersindex + 1
-		winners['Name'][winnersindex]= DeathBet['Players'][key]
-		winners['Name'][winnersindex]= DeathBet['Bet'][key]
-	else
-		losersindex = loserindex + 1
-		losers['Name'][losersindex]= DeathBet['Players'][key]
-		losers['Name'][losersindex]= DeathBet['Bet'][key]
-	end
-end
-
---Calulate and populate Portion for winners table
-local totalbets = 0
-for key,value in pairs(winners['Bet']) do
-	totalbets = totalbets + value
-end
-
-for key,value in pairs(winners['Bet']) do
-	winners['Portion'][key] = winners['Bet']/totalbets
-end
-
---Calculate and populate Payout tables
-for key,value in pairs(losers['Name']) do
-	local Payoutindex = 0
-	for key2,value2 in pairs(winners['Name']) do
-		Payoutindex = Payoutindex + 1
-		if losers['Bet'][key] < winners['Bet'][key2] then
-			losers['Payout']['Name'][Payoutindex] = value2	--value2 = winners['Name']
-			losers['Payout']['Amount'][Payoutindex]=losers['Bet'][key]*winners['Portion']
+	--Populate winners and losers table
+	for key,value in pairs(DeathBet['Bad']) do
+		if value == loser then
+			winnersindex = winnersindex + 1
+			winners['Name'][winnersindex]= DeathBet['Players'][key]
+			winners['Name'][winnersindex]= DeathBet['Bet'][key]
 		else
-			losers['Payout']['Name'][Payoutindex] = value2	--value2 = winners['Name']
-			losers['Payout']['Amount'][Payoutindex]=winners['Bet'][key2]*winners['Portion']
+			losersindex = loserindex + 1
+			losers['Name'][losersindex]= DeathBet['Players'][key]
+			losers['Name'][losersindex]= DeathBet['Bet'][key]
 		end
 	end
 
+	--Calulate and populate Portion for winners table
+	local totalbets = 0
+	for key,value in pairs(winners['Bet']) do
+		totalbets = totalbets + value
+	end
 
-end
+	for key,value in pairs(winners['Bet']) do
+		winners['Portion'][key] = winners['Bet']/totalbets
+	end
 
-
-
+	--Calculate and populate Payout tables
+	for key,value in pairs(losers['Name']) do
+		local Payoutindex = 0
+		for key2,value2 in pairs(winners['Name']) do
+			Payoutindex = Payoutindex + 1
+			if losers['Bet'][key] < winners['Bet'][key2] then
+				losers['Payout']['Name'][Payoutindex] = value2	--value2 = winners['Name']
+				losers['Payout']['Amount'][Payoutindex]=losers['Bet'][key]*winners['Portion']
+			else
+				losers['Payout']['Name'][Payoutindex] = value2	--value2 = winners['Name']
+				losers['Payout']['Amount'][Payoutindex]=winners['Bet'][key2]*winners['Portion']
+			end
+		end
+	end
+	
 end
