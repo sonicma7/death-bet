@@ -15,6 +15,8 @@ RaidMemberCount = 0;
 RaidDeathCount = 0;
 --Bool to check for bets
 hasBets = 0;
+--Bool to check for first death
+DeathCheck = 0
 
 
 function Death_Bet_OnMouseDown()
@@ -37,10 +39,12 @@ function Death_Bet_OnLoad()
 	Death_Bet_MainFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 	Death_Bet_MainFrame:RegisterEvent("INSTANCE_ENCOUNTER_ENGAGE_UNIT")
 	Death_Bet_MainFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+	Death_Bet_MainFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 	SLASH_DB1 = "/DB";
 	DBActive = 0
 	SlashCmdList['DB'] = START_Command;
 	DEFAULT_CHAT_FRAME:AddMessage("LOADED UP!")
+	GUIUpdate()
 end
 
 function Send_Whisper(target, msg)
@@ -332,13 +336,14 @@ function Death_Bet_OnEvent(self, event, ...)
 	local arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9 = ...;
 	local lastkey = 0
 	local rebet = 0
+	local index = GetChannelName("MacheteGamble")
 
 	if event == "GROUP_ROSTER_UPDATE" then
 		DB_Fill_Raid()
 	end
 	
 	--split arg1 (will be msg if from chat event)
-	if event ~= "GROUP_ROSTER_UPDATE" and event ~= "INSTANCE_ENCOUNTER_ENGAGE_UNIT" then
+	if event ~= "GROUP_ROSTER_UPDATE" and event ~= "INSTANCE_ENCOUNTER_ENGAGE_UNIT" and event ~= "PLAYER_REGEN_ENABLED" then
 		local split1 = DBsplit(" ", arg1)
 		--if first val in split is !bet then add/adjust bet in arrays
 		if split1[1] == "!bet" and DBActive == 1 then
@@ -434,23 +439,20 @@ function Death_Bet_OnEvent(self, event, ...)
 		--On unit death, check to see if its a player who was bet on and print payouts
 		--On boss death with no players who were bet on dieing, reset bets
 		if arg2 == "UNIT_DIED" and DBActive == 2 then
-			local index = GetChannelName("MacheteGamble")
-
 			for key2,value2 in pairs(DeathBet['Raid']) do
 				if strupper(arg9) == strupper(value2) then
-					local deathcheck = 0
 					for key,value in pairs(DeathBet['Bad']) do
 						if strupper(arg9) == strupper(value) and RaidDeathCount == 0 then
 							if deathcheck == 0 then
 								SendChatMessage(arg9 .. " death.","CHANNEL","ORCISH",index)
 							end
-							deathcheck = 1
+							DeathCheck = 1
 							DBPayout(strupper(arg9))
 							START_Command("clear")
 						end
 					end
 					
-					if deathcheck == 0 then
+					if DeathCheck == 0 then
 						SendChatMessage(arg9 .. " death. No winners.","CHANNEL","ORCISH",index)
 						START_Command("clear")
 					end
@@ -462,6 +464,13 @@ function Death_Bet_OnEvent(self, event, ...)
 	--On boss encounter start, end betting
 	if event == "INSTANCE_ENCOUNTER_ENGAGE_UNIT" and DBActive == 1 then
 		START_Command("end")
+	end
+	
+	if event == "PLAYER_REGEN_ENABLED" and DBActive == 2 then
+		if DeathCheck == 0 then
+			SendChatMessage("No deaths. No winners.","CHANNEL","ORCISH",index)
+			START_Command("clear")
+		end
 	end
 	
 	--Update GUI with bets or changes
