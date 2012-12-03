@@ -11,12 +11,31 @@ DeathBet = {['Bad'] = {}, ['Player'] = {}, ['Bet']={}, ['Raid']={}};
 TotalBets = {['Bad'] = {}, ['Total'] = {}};
 --Keep raid count
 RaidMemberCount = 0;
---Keep death count
-RaidDeathCount = 0;
 --Bool to check for bets
 hasBets = 0;
---Bool to check for first death
+--Bool to check for first death (0 = No Death, 1 = Death w/winners, 2 = Death no winners)
 DeathCheck = 0
+--String to be used for end condition printouts
+EndOutput = ""
+
+--[[ losers[]
+Name: Loser player Name
+Bet : Bet loser placed
+Payout: table for payouts
+Player: Winner player name
+Amount: Amount owed to that player
+]]--
+DBLosers = {['Name'] = {}, ['Bet'] = {}, ['Payout']={['Player'] = {}, ['Amount']={}}}
+
+--[[winners[]
+Name: Winner players name
+Bet : Bet Winner placed
+Portion: Portion of total bet against loser winner bet (winners bet)/(total winning bets)
+Payout: table for winnings payout(money received)
+Player: Loser player name
+Amount: Amount owed to winner
+]]--
+DBWinners = {['Name'] = {}, ['Bet'] = {}, ['Portion']={}, ['Payout']={ ['Player'] = {}, ['Amount']={}}}
 
 
 function Death_Bet_OnMouseDown()
@@ -27,6 +46,29 @@ function Death_Bet_OnMouseUp()
 	Death_Bet_MainFrame:StopMovingOrSizing()
 end
 
+--[[
+GUI BUTTON FUNCTIONS: 
+START: Starts betting
+END: Force betting to end, normally automatically ended when combat starts
+Announce: Announces the spread to channel.
+Clear: Force clears all bets.
+]]--
+function Death_Bet_Start_Button_OnClick()
+        START_Command("start")
+end
+
+function Death_Bet_End_Button_OnClick()
+        START_Command("end")
+end
+
+function Death_Bet_Announce_Button_OnClick()
+        DBSpread("Gamble", nil)
+end
+
+function Death_Bet_Clear_Button_OnClick()
+        START_Command("clear")
+end
+
 --Called on game startup
 --Listens for bets through whispers, guild chat, and channels
 --Listens for deaths through combat log
@@ -34,7 +76,6 @@ end
 --Starts on user's "/DB start" command
 function Death_Bet_OnLoad()
 	Death_Bet_MainFrame:RegisterEvent("CHAT_MSG_WHISPER")
-	Death_Bet_MainFrame:RegisterEvent("CHAT_MSG_GUILD")
 	Death_Bet_MainFrame:RegisterEvent("CHAT_MSG_CHANNEL")
 	Death_Bet_MainFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 	Death_Bet_MainFrame:RegisterEvent("INSTANCE_ENCOUNTER_ENGAGE_UNIT")
@@ -61,21 +102,21 @@ function START_Command(cmd)
 		DBClear()
 		DB_Fill_Raid()
 		local index = GetChannelName("MacheteGamble")
-		SendChatMessage("=======================","CHANNEL","ORCISH",index)
-		SendChatMessage("Betting has started ","CHANNEL","ORCISH",index)
-		SendChatMessage(" !bet name gold ","CHANNEL","ORCISH",index)
-		SendChatMessage("ex. !bet Eibon 500","CHANNEL","ORCISH",index)
-		SendChatMessage("whisper !help for more commands","CHANNEL","ORCISH",index)
-		SendChatMessage("=======================","CHANNEL","ORCISH",index)
+		SendChatMessage("==========================","CHANNEL","ORCISH",index)
+		SendChatMessage(" Betting has started ","CHANNEL","ORCISH",index)
+		SendChatMessage(" '!bet RAIDERNAME BETAMOUNT' ","CHANNEL","ORCISH",index)
+		SendChatMessage(" ex. !bet Eibon 500 ","CHANNEL","ORCISH",index)
+		SendChatMessage(" whisper !help for more commands ","CHANNEL","ORCISH",index)
+		SendChatMessage("==========================","CHANNEL","ORCISH",index)
 		DBActive = 1
 	--End gambling in preparation for fight
 	--Prints spread for gamblers
 	elseif cmd == "end" and DBActive == 1 then
 		local index = GetChannelName("MacheteGamble")
-		SendChatMessage("============================","CHANNEL","ORCISH",index)
-		SendChatMessage("Betting ended ","CHANNEL","ORCISH",index)
-		SendChatMessage("!odds to see possible payout ","CHANNEL","ORCISH",index)
-		SendChatMessage("============================ ","CHANNEL","ORCISH",index)
+		SendChatMessage("=======================","CHANNEL","ORCISH",index)
+		SendChatMessage(" Betting ended ","CHANNEL","ORCISH",index)
+		SendChatMessage(" !odds to see possible payout ","CHANNEL","ORCISH",index)
+		SendChatMessage("=======================","CHANNEL","ORCISH",index)
 		DBActive = 2
 		Calc_DB_Totals()
 		DBSpread("Gamble", nil)
@@ -83,7 +124,6 @@ function START_Command(cmd)
 	--Whisper winners and losers amount needed to pay, if necessary
 	elseif cmd == "clear" then
 		DBClear()
-		DBActive = 0
 	end
 end
 
@@ -100,41 +140,35 @@ function DBClear()
 		TotalBets['Total'][k] = nil
 	end
 	
-	RaidDeathCount = 0
+	DeathCheck = 0
 	hasBets = 0
+	EndOutput = ""
+	DBActive = 0
 end
 
+--Function to print out help options for player
+function Print_Help( player )
 
---[[
-function Auto_Command(cmd)
-	--Start gambling
-	if cmd == "start" and DBActive == 0 then
-		DB_Fill_Raid()
-		local index = GetChannelName("MacheteGamble")
-		SendChatMessage("=======================","CHANNEL","ORCISH",index)
-		SendChatMessage("Betting has started ","CHANNEL","ORCISH",index)
-		SendChatMessage("!bet name gold ","CHANNEL","ORCISH",index)
-		SendChatMessage("ex. !bet Eibon 500","CHANNEL","ORCISH",index)
-		SendChatMessage("whisper !help for more commands","CHANNEL","ORCISH",index)
-		SendChatMessage("=======================","CHANNEL","ORCISH",index)
-		DBActive = 1
-	--End gambling in preparation for fight
-	--Prints spread for gamblers
-	elseif cmd == "end" and DBActive == 1 then
-		local index = GetChannelName("MacheteGamble")
-		SendChatMessage("============================","CHANNEL","ORCISH",index)
-		SendChatMessage("Betting ended ","CHANNEL","ORCISH",index)
-		SendChatMessage("!odds to see possible payout ","CHANNEL","ORCISH",index)
-		SendChatMessage("============================ ","CHANNEL","ORCISH",index)
-		DBActive = 2
-		DBSpread()
-	--Clear bets for next gambling round
-	--Whisper winners and losers amount needed to pay, if necessary
-	elseif cmd == "clear" then
-		DBSpread()
-		DBActive = 0
+	if DBActive == 0 then
+		Send_Whisper(player, "Betting has not started.")
+	elseif DBActive == 1 then
+		Send_Whisper(player, "Bets can be placed on any player in raid.")
+		Send_Whisper(player, "All bets are in Gold")
+		Send_Whisper(player, "The players that bet on the first raider to die wins.")
+		Send_Whisper(player, "If the first raider to die was not bet on, then no one wins.")
+		Send_Whisper(player, "You may only place one bet.")
+		Send_Whisper(player, "Any subsequent bets will replace the previous bet.")
+		Send_Whisper(player, "Bets are cleared after the raid has wiped or the boss has been killed.")
+		Send_Whisper(player, "Bet commands can be done in chat channel 'machetegamble' or whispered to me.")
+		Send_Whisper(player, "Currently available commands:")
+		Send_Whisper(player, "Bet on a raider = '!bet RAIDERNAME BETAMOUNT'  ex. !bet Eibon 500")
+		Send_Whisper(player, "Check all current bets = '!players'")
+		Send_Whisper(player, "Clear your current bet = '!clear'")
+	elseif DBActive == 2 then
+		Send_Whisper(player, "Currently available commands:")
+		Send_Whisper(player, "Check your possible payout = '!odds'")
 	end
-end --]]
+end
 
 --Function to remove bets from player
 --Used when player removed from raid or better removes bet completely
@@ -157,6 +191,8 @@ function Remove_Bet(player)
 	end
 end
 
+--Remove all bets on a player
+--Called when player leaves group
 function Remove_Bad(bad)
 	local removekey = {}
 	local i = 1
@@ -187,8 +223,6 @@ function Remove_Bad(bad)
 	
 	Calc_DB_Totals()
 end
-		
-		
 
 --Function to refill Raid array with current members
 --Called on GROUP_ROSTER_UPDATE
@@ -254,6 +288,7 @@ function DB_Fill_Raid()
 	end
 end
 
+--Refill totals
 function Calc_DB_Totals()
 	--Clear totals so they can be refilled
 	for k in pairs(TotalBets['Bad']) do
@@ -291,6 +326,7 @@ function Calc_DB_Totals()
 	
 end
 
+--Add single bet to totals
 function Addto_DB_Totals(bad, bet)
 	local foundbad = 0
 	local lastkey = 0
@@ -311,6 +347,7 @@ function Addto_DB_Totals(bad, bet)
 	hasBets = 1
 end
 
+--Print out current total bets on players
 function DBSpread(channel, person)
 	local index = GetChannelName("MacheteGamble")
 	if channel ~= "Whisper" then
@@ -337,16 +374,26 @@ function Death_Bet_OnEvent(self, event, ...)
 	local lastkey = 0
 	local rebet = 0
 	local index = GetChannelName("MacheteGamble")
+	local goodChannel = 1
+	local split2 = {}
 
+	if event == "CHAT_MSG_CHANNEL" then
+		if strlower(arg9) ~= "machetegamble" then
+			goodChannel = 0
+			split2 = DBsplit(" ", arg1)
+		end
+	end
+	
 	if event == "GROUP_ROSTER_UPDATE" then
 		DB_Fill_Raid()
 	end
 	
-	--split arg1 (will be msg if from chat event)
-	if event ~= "GROUP_ROSTER_UPDATE" and event ~= "INSTANCE_ENCOUNTER_ENGAGE_UNIT" and event ~= "PLAYER_REGEN_ENABLED" then
+	--split arg1 (will be msg if from chat event in MacheteGamble or whisper)
+	if event ~= "GROUP_ROSTER_UPDATE" and event ~= "INSTANCE_ENCOUNTER_ENGAGE_UNIT"
+	    and event ~= "PLAYER_REGEN_ENABLED" and goodChannel == 1 then
 		local split1 = DBsplit(" ", arg1)
 		--if first val in split is !bet then add/adjust bet in arrays
-		if split1[1] == "!bet" and DBActive == 1 then
+		if strlower(split1[1]) == "!bet" and DBActive == 1 then
 			local better = strupper(arg2)
 			local bettee = strupper(split1[2])
 			--Check to make sure better is not betting on self
@@ -417,8 +464,8 @@ function Death_Bet_OnEvent(self, event, ...)
 			end
 		end
 
-	--Print players
-		if split1[1] == "!players" then
+		--Print players
+		if strlower(split1[1]) == "!players" then
 			if hasBets == 0 then
 				Send_Whisper(arg2, "No bets have been placed.")
 			else
@@ -427,37 +474,71 @@ function Death_Bet_OnEvent(self, event, ...)
 		end
 	
 		--Allows players to clear their own bet
-		if split1[1] == "!clear" and DBActive == 1 then
+		if strlower(split1[1]) == "!clear" and DBActive == 1 then
 			Remove_Bet( arg2 )
-		elseif split1[1] == "!clear" and DBActive == 2 then
+		elseif strlower(split1[1]) == "!clear" and DBActive == 2 then
 			Send_Whisper(arg2, "Can not remove bet while encounter is in progress...cheater!")
-		elseif split1[1] == "!clear" and DBActive == 0 then
+		elseif strlower(split1[1]) == "!clear" and DBActive == 0 then
 			Send_Whisper(arg2, "No bet to clear.")
 		end
+		
+		--Check for !help printout
+		if strlower(split1[1]) == "!help" then
+			Print_Help( arg2 )
+		
+		--Check for !odds printout
+		--Should only show odds when betting has completed and no one has died yet
+		--(Can be changed to show during betting but then someone could game the system by picking someone with highest possible win and lowest possible loss)
+		--Otherwise it would overwrite the winners if called again
+		if strlower(split1[1]) == "!odds" and DBActive == 2 and DeathCheck == 0 then
+			local madeBet = 0
+			for key,value in pairs(DeathBet['Player']) do
+				if value == strupper(arg2) then
+					madeBet = 1
+					DBPayout( DeathBet['Bad'][key], "Check" )
+				end
+			end
+			if madeBet = 0 then
+				Send_Whisper( arg2, "You did not make a bet!" )
+			end
+		elseif strlower(split1[1]) == "!odds" and DBActive == 1 then
+			Send_Whisper( arg2, "Can not check payout until betting is done!" )
+		elseif strlower(split1[1]) == "!odds" and DBActive == 0 then
+			Send_Whisper( arg2, "Betting has not started!" )
+		elseif strlower(split1[1]) == "!odds" and DBActive == 2 and DeathCheck ~= 0 then
+			Send_Whisper( arg2, "Payout already calculated and will print when encounter has finished." )
+		end
+				
+			
 	
 		--Watch combat log
-		--On unit death, check to see if its a player who was bet on and print payouts
-		--On boss death with no players who were bet on dieing, reset bets
-		if arg2 == "UNIT_DIED" and DBActive == 2 then
+		--On unit death, check to see if its a player who was bet on and save payouts to be printed after combat has ended
+		--If not player who was bet on and is in raid then no winners.
+		if arg2 == "UNIT_DIED" and DBActive == 2 and DeathCheck == 0 then
 			for key2,value2 in pairs(DeathBet['Raid']) do
 				if strupper(arg9) == strupper(value2) then
 					for key,value in pairs(DeathBet['Bad']) do
-						if strupper(arg9) == strupper(value) and RaidDeathCount == 0 then
-							if deathcheck == 0 then
-								SendChatMessage(arg9 .. " death.","CHANNEL","ORCISH",index)
-							end
+						if strupper(arg9) == strupper(value) then
+							EndOutput = arg9 .. " death. Winners and losers will be notified of pending payments."
 							DeathCheck = 1
-							DBPayout(strupper(arg9))
-							START_Command("clear")
+							DBPayout(strupper(arg9), "Death")
 						end
 					end
 					
 					if DeathCheck == 0 then
-						SendChatMessage(arg9 .. " death. No winners.","CHANNEL","ORCISH",index)
-						START_Command("clear")
+						EndOutput = arg9 .. " death. No winners."
+						DeathCheck = 2
 					end
 				end
 			end
+		end
+	
+	--Need to allow MacheteGamble channel to accept Death Bet commands but all channels should be able to use !help
+	elseif goodChannel == 0 then
+		if strlower(split2[1]) == "!help" then
+			Print_Help( arg2 )
+		elseif strlower(split2[1]) == "!bet" or strlower(split2[1]) == "!players" or strlower(split2[1]) == "!clear" or strlower(split2[1])  == "!odds" then
+			Send_Whisper( arg2, "Commands for Death Bet are not accepted from that chat channel." )
 		end
 	end
 
@@ -466,41 +547,25 @@ function Death_Bet_OnEvent(self, event, ...)
 		START_Command("end")
 	end
 	
+	--Check for combat ending, should not fire until boss has died or raid has wiped/boss reset
 	if event == "PLAYER_REGEN_ENABLED" and DBActive == 2 then
+		--On boss death with no players who were bet on dieing, reset bets
 		if DeathCheck == 0 then
-			SendChatMessage("No deaths. No winners.","CHANNEL","ORCISH",index)
-			START_Command("clear")
+			EndOutput = "No deaths. No winners."
 		end
+		
+		--Print out correct end output and clear bets for next boss
+		SendChatMessage(EndOutput,"CHANNEL","ORCISH",index)
+		if DeathCheck == 1 then
+			Print_Payout( "Gamble", nil )
+		end
+		
+		START_Command("clear")
 	end
 	
 	--Update GUI with bets or changes
 	GUIUpdate()
 end
-
-
---[[
-GUI BUTTON FUNCTIONS: 
-START: Starts betting
-END: Force betting to end, normally automatically ended when combat starts
-Announce: Announces the spread to channel.
-Clear: Force clears all bets.
-]]--
-function Death_Bet_Start_Button_OnClick()
-        START_Command("start")
-end
-
-function Death_Bet_End_Button_OnClick()
-        START_Command("end")
-end
-
-function Death_Bet_Announce_Button_OnClick()
-        DBSpread("Gamble", nil)
-end
-
-function Death_Bet_Clear_Button_OnClick()
-        START_Command("clear")
-end
-
 
 --Function to update the GUI with the current spread information, called after any event
 function GUIUpdate()
@@ -523,6 +588,137 @@ function GUIUpdate()
 	end
 	
 	Death_Bet_MainFrame_GoldString:SetText(outputstring)
+end
+
+--Function to print payout on !odds and payments when a player wins
+function Print_Payout( channel, player )
+	local index = GetChannelName("MacheteGamble")
+	
+	--Check for !odds call and print the total possible win and loss amounts for player
+	if channel == "Whisper" then
+		for key,value in pairs(DBWinners['Payout']['Name']) do
+			if value == player then
+				Send_Whisper( player, "Possible winnings: " .. DBWinners['Payout']['Amount'][key] )
+			end
+		end
+		
+		local totalloss = 0
+		for key,value in pairs(DBLosers['Payout']['Name']) do
+			if value == player then
+				totalloss = totalloss + DBLosers['Payout']['Amount'][key]
+			end
+		end
+		Send_Whisper( player, "Possible loss: " .. totalloss )
+	--Should only be called on combat end and there is a winner
+	else
+		--Print out loss notifications
+		for key,value in pairs(DBLosers['Payout']['Name']) do
+			Send_Whisper( DBLosers['Payout']['Name'][key], "You lost Death Bet!")
+		end
+		
+		--Loop through winners
+		--Set currpay to amount that needs to be paid to winner
+		--If amount needed to be paid is less than the loser has to pay then move to next winner
+		--If amount needed to be paid is more than the loser has to pay then reduce amount needed by what is to be paid by that loser and move to next loser
+		--Logic should dictate that amount paid to winners should be equal to amount paid by losers thus everything should become 0 in loop before indexes run out and cause 'nil' error
+		for key,value in pairs(DBWinners['Payout']['Amount']) do
+			Send_Whisper( DBWinners['Payout']['Name'][key], "You won Death Bet!")
+			local currpay = value
+			local loserindex = 1
+			while currpay ~= 0 do
+				if DBLosers['Payout']['Amount'][loserindex] ~= 0 then
+					if currpay <= DBLosers['Payout']['Amount'][loserindex] then
+						Send_Whisper( DBWinners['Payout']['Name'][key], "You should receive " .. currpay .. " from " .. DBLosers['Payout']['Name'][loserindex] )
+						Send_Whisper( DBLosers['Payout']['Name'][loserindex], "Pay " .. currpay .. " to " .. DBWinners['Payout']['Name'][key] )
+						DBLosers['Payout']['Amount'][loserindex] = DBLosers['Payout']['Amount'][loserindex] - currpay
+						currpay = 0
+					else
+						Send_Whisper( DBWinners['Payout']['Name'][key], "You should receive " .. DBLosers['Payout']['Amount'][loserindex] .. " from " .. DBLosers['Payout']['Name'][loserindex] )
+						Send_Whisper( DBLosers['Payout']['Name'][loserindex], "Pay " .. DBLosers['Payout']['Amount'][loserindex] .. " to " .. DBWinners['Payout']['Name'][key] )
+						DBLosers['Payout']['Amount'][loserindex] = 0
+						currpay = currpay - DBLosers['Payout']['Amount'][loserindex]
+					end
+				end
+				loserindex = loserindex + 1
+			end
+		end
+	end
+
+end
+
+--[[
+****In Developement****
+Function will take a string of the person who died(post checking if valid for payouts).
+]]--
+
+function DBPayout( loser, call )
+	local winnersindex = 0
+	local losersindex = 0
+	
+	--Clear out winner/loser/payout values
+	for key,value in pairs(DBWinners['Name']) do
+		DBWinners['Name'][key] = nil
+		DBWinners['Bet'][key] = nil
+		DBWinners['Portion'][key] = nil
+	end
+	
+	for key,value in pairs(DBLosers['Name']) do
+		DBLosers['Name'][key] = nil
+		DBLosers['Bet'][key] = nil
+		DBLosers['Portion'][key] = nil
+	end
+	
+	for key,value in pairs(DBWinners['Payout']['Name']) do
+		DBWinners['Payout']['Name'][key] = nil
+		DBWinners['Payout']['Amount'][key] = nil
+	end
+	
+	for key,value in pairs(DBLosers['Name']) do
+		DBLosers['Payout']['Name'][key] = nil
+		DBLosers['Payout']['Amount'][key] = nil
+	end
+
+	--Populate winners and losers table
+	for key,value in pairs(DeathBet['Bad']) do
+		if value == loser then
+			winnersindex = winnersindex + 1
+			DBWinners['Name'][winnersindex] = DeathBet['Players'][key]
+			DBWinners['Bet'][winnersindex] = DeathBet['Bet'][key]
+		else
+			losersindex = loserindex + 1
+			DBLosers['Name'][losersindex] = DeathBet['Players'][key]
+			DBLosers['Bet'][losersindex] = DeathBet['Bet'][key]
+		end
+	end
+
+	--Calulate and populate Portion for winners table
+	local totalbets = 0
+	for key,value in pairs(DBWinners['Bet']) do
+		totalbets = totalbets + value
+	end
+
+	for key,value in pairs(DBWinners['Bet']) do
+		DBWinners['Portion'][key] = DBWinners['Bet']/totalbets
+	end
+
+	--Calculate and populate Payout tables
+	for key,value in pairs(DBLosers['Name']) do
+		local Payoutindex = 0
+		for key2,value2 in pairs(DBWinners['Name']) do
+			Payoutindex = Payoutindex + 1
+			if DBLosers['Bet'][key] <= DBWinners['Bet'][key2] then
+				DBLosers['Payout']['Name'][Payoutindex] = value2	--value2 = DBWinners['Name']
+				DBLosers['Payout']['Amount'][Payoutindex] = DBround( DBLosers['Bet'][key]*DBWinners['Portion'][key2] )
+			else
+				DBLosers['Payout']['Name'][Payoutindex] = value2	--value2 = DBWinners['Name']
+				DBLosers['Payout']['Amount'][Payoutindex] = DBround( DBWinners['Bet'][key2]*DBWinners['Portion'][key2] )
+			end
+		end
+	end
+	
+	if call == "Whisper" then
+		Print_Payout( "Whisper", loser )
+	end
 end
 
 --Function to round numbers
@@ -549,74 +745,4 @@ function DBsplit(delimiter, text)
     end
   end
   return list
-end
-
-
---[[
-****In Developement****
-Function will take a string of the person who died(post checking if valid for payouts) and whisper all nessiary actions for payouts.
-]]--
-
-function DBPayout(loser)
-
-	--[[winners[]
-	Name: Winner players name
-	Bet : Bet Winner placed
-	Portion: Portion of total bet against loser winner bet (winners bet)/(total winning bets)
-	Payout: table for winnings payout(money received)
-	Player: Loser player name
-	Amount: Amount owed to winner
-	]]--
-	local winners = {['Name'] = {}, ['Bet'] = {}, ['Portion']={}, ['Payout']={ ['Player'] = {}, ['Amount']={}}}
-	local winnersindex = 0
-
-	--[[ losers[]
-	Name: Loser player Name
-	Bet : Bet loser placed
-	Payout: table for payouts
-	Player: Winner player name
-	Amount: Amount owed to that player
-	]]--
-	local losers={['Name'] = {}, ['Bet'] = {}, ['Payout']={['Player'] = {}, ['Amount']={}}}
-	local losersindex = 0
-
-
-	--Populate winners and losers table
-	for key,value in pairs(DeathBet['Bad']) do
-		if value == loser then
-			winnersindex = winnersindex + 1
-			winners['Name'][winnersindex]= DeathBet['Players'][key]
-			winners['Name'][winnersindex]= DeathBet['Bet'][key]
-		else
-			losersindex = loserindex + 1
-			losers['Name'][losersindex]= DeathBet['Players'][key]
-			losers['Name'][losersindex]= DeathBet['Bet'][key]
-		end
-	end
-
-	--Calulate and populate Portion for winners table
-	local totalbets = 0
-	for key,value in pairs(winners['Bet']) do
-		totalbets = totalbets + value
-	end
-
-	for key,value in pairs(winners['Bet']) do
-		winners['Portion'][key] = winners['Bet']/totalbets
-	end
-
-	--Calculate and populate Payout tables
-	for key,value in pairs(losers['Name']) do
-		local Payoutindex = 0
-		for key2,value2 in pairs(winners['Name']) do
-			Payoutindex = Payoutindex + 1
-			if losers['Bet'][key] < winners['Bet'][key2] then
-				losers['Payout']['Name'][Payoutindex] = value2	--value2 = winners['Name']
-				losers['Payout']['Amount'][Payoutindex]=losers['Bet'][key]*winners['Portion']
-			else
-				losers['Payout']['Name'][Payoutindex] = value2	--value2 = winners['Name']
-				losers['Payout']['Amount'][Payoutindex]=winners['Bet'][key2]*winners['Portion']
-			end
-		end
-	end
-	
 end
