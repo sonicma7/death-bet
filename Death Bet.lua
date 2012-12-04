@@ -25,7 +25,7 @@ Payout: table for payouts
 Player: Winner player name
 Amount: Amount owed to that player
 ]]--
-DBLosers = {['Name'] = {}, ['Bet'] = {}, ['Payout']={['Player'] = {}, ['Amount']={}}}
+DBLosers = {['Name'] = {}, ['Bet'] = {}, ['Payout']={['Name'] = {}, ['Amount']={}}}
 
 --[[winners[]
 Name: Winner players name
@@ -35,7 +35,7 @@ Payout: table for winnings payout(money received)
 Player: Loser player name
 Amount: Amount owed to winner
 ]]--
-DBWinners = {['Name'] = {}, ['Bet'] = {}, ['Portion']={}, ['Payout']={ ['Player'] = {}, ['Amount']={}}}
+DBWinners = {['Name'] = {}, ['Bet'] = {}, ['Portion']={}, ['Payout']={ ['Name'] = {}, ['Amount']={}}}
 
 
 function Death_Bet_OnMouseDown()
@@ -494,7 +494,7 @@ function Death_Bet_OnEvent(self, event, ...)
 		if strlower(split1[1]) == "!odds" and DBActive == 2 and DeathCheck == 0 then
 			local madeBet = 0
 			for key,value in pairs(DeathBet['Player']) do
-				if value == strupper(arg2) then
+				if value == arg2 then
 					madeBet = 1
 					DBPayout( DeathBet['Bad'][key], "Check" )
 				end
@@ -674,7 +674,7 @@ function DBPayout( loser, call )
 		DBWinners['Payout']['Amount'][key] = nil
 	end
 	
-	for key,value in pairs(DBLosers['Name']) do
+	for key,value in pairs(DBLosers['Payout']['Name']) do
 		DBLosers['Payout']['Name'][key] = nil
 		DBLosers['Payout']['Amount'][key] = nil
 	end
@@ -683,11 +683,11 @@ function DBPayout( loser, call )
 	for key,value in pairs(DeathBet['Bad']) do
 		if value == loser then
 			winnersindex = winnersindex + 1
-			DBWinners['Name'][winnersindex] = DeathBet['Players'][key]
+			DBWinners['Name'][winnersindex] = DeathBet['Player'][key]
 			DBWinners['Bet'][winnersindex] = DeathBet['Bet'][key]
 		else
-			losersindex = loserindex + 1
-			DBLosers['Name'][losersindex] = DeathBet['Players'][key]
+			losersindex = losersindex + 1
+			DBLosers['Name'][losersindex] = DeathBet['Player'][key]
 			DBLosers['Bet'][losersindex] = DeathBet['Bet'][key]
 		end
 	end
@@ -699,7 +699,7 @@ function DBPayout( loser, call )
 	end
 
 	for key,value in pairs(DBWinners['Bet']) do
-		DBWinners['Portion'][key] = DBWinners['Bet']/totalbets
+		DBWinners['Portion'][key] = value/totalbets
 	end
 
 	--Calculate and populate Payout tables
