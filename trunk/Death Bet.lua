@@ -496,7 +496,7 @@ function Death_Bet_OnEvent(self, event, ...)
 			for key,value in pairs(DeathBet['Player']) do
 				if value == arg2 then
 					madeBet = 1
-					DBPayout( DeathBet['Bad'][key], "Check" )
+					DBPayout( DeathBet['Bad'][key], value, "Check" )
 				end
 			end
 			if madeBet == 0 then
@@ -522,7 +522,7 @@ function Death_Bet_OnEvent(self, event, ...)
 						if strupper(arg9) == strupper(value) then
 							EndOutput = arg9 .. " death. Winners and losers will be notified of pending payments."
 							DeathCheck = 1
-							DBPayout(strupper(arg9), "Death")
+							DBPayout(strupper(arg9), nil, "Death")
 						end
 					end
 					
@@ -603,13 +603,24 @@ function Print_Payout( channel, player )
 			end
 		end
 		
-		local totalloss = 0
-		for key,value in pairs(DBLosers['Payout']['Name']) do
+		local savekey
+		for key,value in pairs(DeathBet['Player']) do
 			if value == player then
-				totalloss = totalloss + DBLosers['Payout']['Amount'][key]
+				savekey = key
 			end
 		end
-		Send_Whisper( player, "Possible loss: " .. totalloss )
+		
+		local saveBet = 0
+		for key,value in pairs(DeathBet['Player']) do
+			if value ~= player and DeathBet['Bad'][key] ~= DeathBet['Bad'][savekey] then
+				if DeathBet['Bet'][key] > DeathBet['Bet'][savekey] then
+					saveBet = DeathBet['Bet'][savekey]
+				elseif DeathBet['Bet'][key] > saveBet then
+					saveBet = DeathBet['Bet'][key]
+				end
+			end
+		end
+		Send_Whisper( player, "Possible loss: " .. saveBet )
 	--Should only be called on combat end and there is a winner
 	else
 		--Print out loss notifications
@@ -652,7 +663,7 @@ end
 Function will take a string of the person who died(post checking if valid for payouts).
 ]]--
 
-function DBPayout( loser, call )
+function DBPayout( loser, winner, channel )
 	local winnersindex = 0
 	local losersindex = 0
 	
@@ -666,7 +677,6 @@ function DBPayout( loser, call )
 	for key,value in pairs(DBLosers['Name']) do
 		DBLosers['Name'][key] = nil
 		DBLosers['Bet'][key] = nil
-		DBLosers['Portion'][key] = nil
 	end
 	
 	for key,value in pairs(DBWinners['Payout']['Name']) do
@@ -702,23 +712,34 @@ function DBPayout( loser, call )
 		DBWinners['Portion'][key] = value/totalbets
 	end
 
-	--Calculate and populate Payout tables
+	--Calculate and populate Payout table
+	local totalpayout = 0
+	local payindex = 0
 	for key,value in pairs(DBLosers['Name']) do
-		local Payoutindex = 0
+		local TMPLoser = value
+		local TMPAmount = 0
 		for key2,value2 in pairs(DBWinners['Name']) do
-			Payoutindex = Payoutindex + 1
 			if DBLosers['Bet'][key] <= DBWinners['Bet'][key2] then
-				DBLosers['Payout']['Name'][Payoutindex] = value2	--value2 = DBWinners['Name']
-				DBLosers['Payout']['Amount'][Payoutindex] = DBround( DBLosers['Bet'][key]*DBWinners['Portion'][key2] )
+				TMPAmount = TMPAmount + DBround( DBLosers['Bet'][key]*DBWinners['Portion'][key2] )
 			else
-				DBLosers['Payout']['Name'][Payoutindex] = value2	--value2 = DBWinners['Name']
-				DBLosers['Payout']['Amount'][Payoutindex] = DBround( DBWinners['Bet'][key2]*DBWinners['Portion'][key2] )
+				TMPAmount = TMPAmount + DBround( DBWinners['Bet'][key2]*DBWinners['Portion'][key2] )
 			end
 		end
+		payindex = payindex + 1
+		DBLosers['Payout']['Name'][payindex] = value
+		DBLosers['Payout']['Amount'][payindex] = TMPAmount
+		totalpayout = totalpayout + TMPAmount
 	end
 	
-	if call == "Whisper" then
-		Print_Payout( "Whisper", loser )
+	payindex = 0
+	for key,value in pairs(DBWinners['Name']) do
+		payindex = payindex + 1
+		DBWinners['Payout']['Name'][payindex] = value
+		DBWinners['Payout']['Amount'][payindex] = DBround( totalpayout * DBWinners['Portion'][key] )
+	end
+	
+	if channel == "Check" then
+		Print_Payout( "Whisper", winner )
 	end
 end
 
