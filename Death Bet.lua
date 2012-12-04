@@ -485,6 +485,7 @@ function Death_Bet_OnEvent(self, event, ...)
 		--Check for !help printout
 		if strlower(split1[1]) == "!help" then
 			Print_Help( arg2 )
+		end
 		
 		--Check for !odds printout
 		--Should only show odds when betting has completed and no one has died yet
@@ -498,7 +499,7 @@ function Death_Bet_OnEvent(self, event, ...)
 					DBPayout( DeathBet['Bad'][key], "Check" )
 				end
 			end
-			if madeBet = 0 then
+			if madeBet == 0 then
 				Send_Whisper( arg2, "You did not make a bet!" )
 			end
 		elseif strlower(split1[1]) == "!odds" and DBActive == 1 then
