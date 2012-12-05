@@ -239,7 +239,10 @@ function DB_Fill_Raid()
 		for i=1,RaidMemberCount,1 do
 			local name, rank, subgroup, level, class, fileName,
 				zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(i)
-			DeathBet['Raid'][i] = strupper(name)
+			if name ~= nil then
+				
+				DeathBet['Raid'][i] = gsub(strupper(name), " ", "")
+			end
 		end
 	end
 	
@@ -400,7 +403,7 @@ function Death_Bet_OnEvent(self, event, ...)
 			if bettee ~= better then
 				--Check to make sure bet is a number
 				local testbet = tonumber(split1[3])
-				if testbet ~= nil and DBround(testbet) > 0 then
+				if testbet ~= nil and DBround(testbet) > 0 and DBround(testbet) < 1001 then
 					--Check for previous bet from player
 					for key,value in pairs(DeathBet['Player']) do
 						lastkey = key
@@ -454,6 +457,8 @@ function Death_Bet_OnEvent(self, event, ...)
 							Send_Whisper(arg2, "Person whom you bet on is not in raid! Original bet still in place.")
 						end
 					end
+				elseif testbet ~= nil and DBround(testbet) > 1000 then
+					Send_Whisper(arg2, "Max is bet is 1000!")
 				else
 					--Error for bad bet value
 					Send_Whisper(arg2, "Not a valid bet!")
@@ -462,6 +467,11 @@ function Death_Bet_OnEvent(self, event, ...)
 				--Error for betting on self
 				Send_Whisper(arg2, "Can not bet on yourself!")
 			end
+			
+		elseif strlower(split1[1]) == "!bet" and DBActive == 2 then
+			Send_Whisper(arg2, "Betting has ended!")
+		elseif strlower(split1[1]) == "!bet" and DBActive == 0 then
+			Send_Whisper(arg2, "Betting has not started!")
 		end
 
 		--Print players
