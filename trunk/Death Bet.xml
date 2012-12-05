@@ -28,17 +28,17 @@
 							</FontHeight>
 						</ButtonText>
 						<Size>
-							<AbsDimension x="150" y="100" />
+							<AbsDimension x="60" y="30" />
 						</Size>
 						<Anchors>
 							<Anchor point="TOPLEFT">
 								<Offset>
-									<AbsDimension x="-15" y="30" z= "0"/>
+									<AbsDimension x="0" y="0" z= "0"/>
 								</Offset>
 							</Anchor>
 						</Anchors>
 						<NormalTexture file="Interface\ACHIEVEMENTFRAME\UI-ACHIEVEMENT-HEADER">
-							<TexCoords left=".4" right=".69" top=".4" bottom="0.55" />
+							<TexCoords left=".4" right=".69" top=".43" bottom="0.55" />
 						</NormalTexture>
 						<Scripts>
 							<OnClick>
