@@ -240,7 +240,6 @@ function DB_Fill_Raid()
 			local name, rank, subgroup, level, class, fileName,
 				zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(i)
 			if name ~= nil then
-				
 				DeathBet['Raid'][i] = gsub(strupper(name), " ", "")
 			end
 		end
@@ -530,9 +529,13 @@ function Death_Bet_OnEvent(self, event, ...)
 				if strupper(arg9) == strupper(value2) then
 					for key,value in pairs(DeathBet['Bad']) do
 						if strupper(arg9) == strupper(value) then
-							EndOutput = arg9 .. " death. Winners and losers will be notified of pending payments."
-							DeathCheck = 1
-							DBPayout(strupper(arg9), nil, "Death")
+							local name, rank, subgroup, level, class, fileName,
+								zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(key2)
+							if isDead ~= nil then
+								EndOutput = arg9 .. " death. Winners and losers will be notified of pending payments."
+								DeathCheck = 1
+								DBPayout(strupper(arg9), nil, "Death")
+							end
 						end
 					end
 					
@@ -657,8 +660,8 @@ function Print_Payout( channel, player )
 					else
 						Send_Whisper( DBWinners['Payout']['Name'][key], "You should receive " .. DBLosers['Payout']['Amount'][loserindex] .. " from " .. DBLosers['Payout']['Name'][loserindex] )
 						Send_Whisper( DBLosers['Payout']['Name'][loserindex], "Pay " .. DBLosers['Payout']['Amount'][loserindex] .. " to " .. DBWinners['Payout']['Name'][key] )
-						DBLosers['Payout']['Amount'][loserindex] = 0
 						currpay = currpay - DBLosers['Payout']['Amount'][loserindex]
+						DBLosers['Payout']['Amount'][loserindex] = 0
 					end
 				end
 				loserindex = loserindex + 1
@@ -714,7 +717,13 @@ function DBPayout( loser, winner, channel )
 
 	--Calulate and populate Portion for winners table
 	local totalbets = 0
+	local highbet = 0
+	local highkey = 0
 	for key,value in pairs(DBWinners['Bet']) do
+		if highbet < value then
+			highbet = value
+			highkey = key
+		end
 		totalbets = totalbets + value
 	end
 
@@ -729,10 +738,10 @@ function DBPayout( loser, winner, channel )
 		local TMPLoser = value
 		local TMPAmount = 0
 		for key2,value2 in pairs(DBWinners['Name']) do
-			if DBLosers['Bet'][key] <= DBWinners['Bet'][key2] then
+			if DBLosers['Bet'][key] < highbet then
 				TMPAmount = TMPAmount + DBround( DBLosers['Bet'][key]*DBWinners['Portion'][key2] )
 			else
-				TMPAmount = TMPAmount + DBround( DBWinners['Bet'][key2]*DBWinners['Portion'][key2] )
+				TMPAmount = TMPAmount + DBround( DBWinners['Bet'][highkey]*DBWinners['Portion'][key2] )
 			end
 		end
 		payindex = payindex + 1
