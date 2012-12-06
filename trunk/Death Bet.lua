@@ -481,6 +481,14 @@ function Death_Bet_OnEvent(self, event, ...)
 				DBSpread("Whisper", arg2)
 			end
 		end
+		
+		--TEST FUNCTION
+		if strlower(split1[1]) == "!testbet" then
+			DeathBet['Player'][lastkey+1]=arg2
+			DeathBet['Bad'][lastkey+1]=strupper(split1[2])
+			DeathBet['Bet'][lastkey+1]=DBround(tonumber(split1[3]))
+			Addto_DB_Totals(DeathBet['Bad'][lastkey+1], DeathBet['Bet'][lastkey+1])
+		end
 	
 		--Allows players to clear their own bet
 		if strlower(split1[1]) == "!clear" and DBActive == 1 then
@@ -584,9 +592,11 @@ end
 --Function to update the GUI with the current spread information, called after any event
 function GUIUpdate()
 	local outputstring = ""
+	local outputstring2= ""
 
 	if DBActive == 0 then
 		outputstring = "Death Bet has not been started\n"
+		outputstring2= "Death Bet has not been started"
 	elseif DBActive == 1 or DBActive == 2 then
 		if DBActive == 1 then
 			outputstring = "CURRENTLY BETTING\n\n"
@@ -594,13 +604,19 @@ function GUIUpdate()
 			outputstring = "BETTING DONE\n\n"
 		end
 			
-		outputstring = outputstring .. "Spread:\n"
+		for key,value in pairs(DeathBet['Player']) do
+			outputstring2 = outputstring2 .. value .. " " .. DeathBet['Bet'][key] .. " " .. DeathBet['Bad'][key] .. "\n"
+		end
 
+
+			outputstring = outputstring .. "Spread:\n"
+	
 		for key,value in pairs(TotalBets['Bad']) do
 			outputstring = outputstring .. value .. " " .. TotalBets['Total'][key] .. "\n"
 		end
 	end
 	
+	Death_Bet_MainFrame_GoldString2:SetText(outputstring2)
 	Death_Bet_MainFrame_GoldString:SetText(outputstring)
 end
 
