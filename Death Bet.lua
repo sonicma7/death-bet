@@ -535,10 +535,10 @@ function Death_Bet_OnEvent(self, event, ...)
 		if arg2 == "UNIT_DIED" and DBActive == 2 and DeathCheck == 0 then
 			for key2,value2 in pairs(DeathBet['Raid']) do
 				if strupper(arg9) == strupper(value2) then
+					local name, rank, subgroup, level, class, fileName,
+						zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(key2)
 					for key,value in pairs(DeathBet['Bad']) do
 						if strupper(arg9) == strupper(value) then
-							local name, rank, subgroup, level, class, fileName,
-								zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(key2)
 							if isDead ~= nil then
 								EndOutput = arg9 .. " death. Winners and losers will be notified of pending payments."
 								DeathCheck = 1
@@ -546,8 +546,8 @@ function Death_Bet_OnEvent(self, event, ...)
 							end
 						end
 					end
-					
-					if DeathCheck == 0 then
+
+					if DeathCheck == 0 and isDead ~= nil then
 						EndOutput = arg9 .. " death. No winners."
 						DeathCheck = 2
 					end
