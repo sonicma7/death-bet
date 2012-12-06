@@ -7,7 +7,7 @@
 			<Anchor point="CENTER" />
 		</Anchors>
 		<Size>
-			<AbsDimension x="600" y="200" />
+			<AbsDimension x="260" y="235" />
 		</Size>
 		<Backdrop bgFile="Interface\Tooltips\UI-Tooltip-Background" tile="true">
 			<TileSize>
@@ -38,7 +38,7 @@
 							</Anchor>
 						</Anchors>
 						<NormalTexture file="Interface\ACHIEVEMENTFRAME\UI-ACHIEVEMENT-HEADER">
-							<TexCoords left=".4" right=".69" top=".43" bottom="0.55" />
+							<TexCoords left=".43" right=".67" top=".43" bottom="0.55" />
 						</NormalTexture>
 						<Scripts>
 							<OnClick>
@@ -47,7 +47,7 @@
 						</Scripts>
 					</Button>
 					<Button name="$parent_Button_End">
-						<ButtonText name="$parent_END_Text" inherits="GameFontHighlight" text = "END">
+						<ButtonText name="$parent_END_Text" inherits="GameFontHighlight" text = "End">
 							<Anchors>
 								<Anchor point="CENTER"/>
 							</Anchors>
@@ -56,17 +56,17 @@
 							</FontHeight>
 						</ButtonText>
 						<Size>
-							<AbsDimension x="150" y="100" />
+							<AbsDimension x="60" y="30" />
 						</Size>
 						<Anchors>
 							<Anchor point="TOPLEFT">
 								<Offset>
-									<AbsDimension x="140" y="30" />
+									<AbsDimension x="60" y="0" />
 								</Offset>
 							</Anchor>
 						</Anchors>
 						<NormalTexture file="Interface\ACHIEVEMENTFRAME\UI-ACHIEVEMENT-HEADER">
-							<TexCoords left=".4" right=".69" top=".4" bottom="0.55" />
+							<TexCoords left=".43" right=".67" top=".43" bottom="0.55" />
 						</NormalTexture>
 						<Scripts>
 							<OnClick>
@@ -84,17 +84,17 @@
 							</FontHeight>
 						</ButtonText>
 						<Size>
-							<AbsDimension x="150" y="100" />
+							<AbsDimension x="80" y="30" />
 						</Size>
 						<Anchors>
 							<Anchor point="TOPLEFT">
 								<Offset>
-									<AbsDimension x="295" y="30" />
+									<AbsDimension x="120" y="0" />
 								</Offset>
 							</Anchor>
 						</Anchors>
 						<NormalTexture file="Interface\ACHIEVEMENTFRAME\UI-ACHIEVEMENT-HEADER">
-							<TexCoords left=".4" right=".69" top=".4" bottom="0.55" />
+							<TexCoords left=".43" right=".67" top=".43" bottom="0.55" />
 						</NormalTexture>
 						<Scripts>
 							<OnClick>
@@ -112,17 +112,17 @@
 							</FontHeight>
 						</ButtonText>
 						<Size>
-							<AbsDimension x="150" y="100" />
+							<AbsDimension x="60" y="30" />
 						</Size>
 						<Anchors>
 							<Anchor point="TOPLEFT">
 								<Offset>
-									<AbsDimension x="450" y="30" />
+									<AbsDimension x="200" y="0" />
 								</Offset>
 							</Anchor>
 						</Anchors>
 						<NormalTexture file="Interface\ACHIEVEMENTFRAME\UI-ACHIEVEMENT-HEADER">
-							<TexCoords left=".4" right=".69" top=".4" bottom="0.55" />
+							<TexCoords left=".43" right=".67" top=".43" bottom="0.55" />
 						</NormalTexture>
 						<Scripts>
 							<OnClick>
@@ -131,12 +131,37 @@
 						</Scripts>
 					</Button>
 					
+					<!--This is the center border, I KNOW ITS A FUCKING BUTTON STFU-->
+					<Button name="$parent_Button_Border">
+						<Size>
+							<AbsDimension x="260" y="5" />
+						</Size>
+						<Anchors>
+							<Anchor point="TOPLEFT">
+								<Offset>
+									<AbsDimension x="0" y="-135" />
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<NormalTexture file="Interface\ACHIEVEMENTFRAME\UI-ACHIEVEMENT-HEADER">
+							<TexCoords left=".43" right=".67" top=".43" bottom="0.55" />
+						</NormalTexture>
+						<Scripts>
+							<OnClick>
+								Death_Bet_Clear_Button_OnClick()
+							</OnClick>
+						</Scripts>
+					</Button>
 				</Frames>
 		<!--
 			</Layer>
 		</Layers>-->
 		
-		
+
+
+
+
+
 		<Layers>
 			<Layer level = "BACKGROUND">
 			
@@ -145,7 +170,7 @@
 			
 			</Layer>
 			<Layer level = "ARTWORK">
-				
+
 			</Layer>
 		
 			<Layer level="OVERLAY">
@@ -155,12 +180,12 @@
 							justifyV="TOP"
 							justifyH="LEFT">
 					<Size>
-						<AbsDimension x="200" y="100" />
+						<AbsDimension x="260" y="100" />
 					</Size>
 					<Anchors>
 						<Anchor point="TOPLEFT">
 							<Offset>
-								<AbsDimension x="20" y="-75" />
+								<AbsDimension x="0" y="-35" />
 							</Offset>
 						</Anchor>
 					</Anchors>
@@ -168,16 +193,16 @@
 				</FontString>
 				<FontString name="$parent_GoldString2"
 							inherits="SystemFont_Small"
-							text="START"
+							text="NAME IS $parent_GoldString2 PUT BETS HERE &#10;&#10;Player          Bad           Bet     Payout&#10;Pandabus    Eibon        100     50&#10;Eibon           Pandabus   50     50"
 							justifyV="TOP"
 							justifyH="LEFT">
 					<Size>
-						<AbsDimension x="200" y="100" />
+						<AbsDimension x="260" y="100" />
 					</Size>
 					<Anchors>
 						<Anchor point="TOPLEFT">
 							<Offset>
-								<AbsDimension x="20" y="-15" z="-10000"/>
+								<AbsDimension x="0" y="-140"/>
 							</Offset>
 						</Anchor>
 					</Anchors>
