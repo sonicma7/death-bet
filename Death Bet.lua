@@ -22,8 +22,8 @@ EndOutput = ""
 Name: Loser player Name
 Bet : Bet loser placed
 Payout: table for payouts
-Player: Winner player name
-Amount: Amount owed to that player
+Player: Loser player name
+Amount: Amount owed by that player
 ]]--
 DBLosers = {['Name'] = {}, ['Bet'] = {}, ['Payout']={['Name'] = {}, ['Amount']={}}}
 
@@ -32,8 +32,8 @@ Name: Winner players name
 Bet : Bet Winner placed
 Portion: Portion of total bet against loser winner bet (winners bet)/(total winning bets)
 Payout: table for winnings payout(money received)
-Player: Loser player name
-Amount: Amount owed to winner
+Player: Winner player name
+Amount: Amount owed to that player
 ]]--
 DBWinners = {['Name'] = {}, ['Bet'] = {}, ['Portion']={}, ['Payout']={ ['Name'] = {}, ['Amount']={}}}
 
@@ -256,6 +256,10 @@ function DB_Fill_Raid()
 			end
 		end
 		
+		if value == 'NONE' then
+			badfound = 1
+		end
+		
 		--If found not set to 1 then not found in raid so add that player to list
 		--Do not add to list if already on list
 		if badfound == 0 then
@@ -356,11 +360,18 @@ function DBSpread(channel, person)
 		SendChatMessage("Spread:","CHANNEL","ORCISH",index)
 	end
 	
+	local tmpvalue = ''
 	for key,value in pairs(TotalBets['Bad']) do
-		if channel == "Whisper" then
-			Send_Whisper(person, key .. ". " .. value .. " " ..  TotalBets['Total'][key])
+		if value == 'NONE' then
+			tmpvalue = "'No Death'"
 		else
-			SendChatMessage(key .. ". " .. value .. " " .. TotalBets['Total'][key],"CHANNEL","ORCISH",index)
+			tmpvalue = value
+		end
+		
+		if channel == "Whisper" then
+			Send_Whisper(person, key .. ". " .. tmpvalue .. " " ..  TotalBets['Total'][key])
+		else
+			SendChatMessage(key .. ". " .. tmpvalue .. " " .. TotalBets['Total'][key],"CHANNEL","ORCISH",index)
 		end
 	end
 
@@ -430,6 +441,16 @@ function Death_Bet_OnEvent(self, event, ...)
 										Addto_DB_Totals(DeathBet['Bad'][lastkey+1], DeathBet['Bet'][lastkey+1])
 									end
 								end
+								
+								if strupper(split1[2]) == "NONE" or strupper(split1[2]) == "NOONE" or strupper(split1[2]) == "NODEATH" then
+									betteeInRaid = 1
+									Send_Whisper(arg2, "Bet placed for " .. DBround(tonumber(split1[3])) .. " on 'No Deaths'.")
+									DeathBet['Player'][lastkey+1]=arg2
+									DeathBet['Bad'][lastkey+1]='NONE'
+									DeathBet['Bet'][lastkey+1]=DBround(tonumber(split1[3]))
+									Addto_DB_Totals(DeathBet['Bad'][lastkey+1], DeathBet['Bet'][lastkey+1])
+								end
+								
 								--Error for bettee not in raid
 								if betteeInRaid == 0 then
 									Send_Whisper(arg2, "Person whom you bet on is not in raid!")
@@ -453,6 +474,18 @@ function Death_Bet_OnEvent(self, event, ...)
 									DeathBet['Bet'][rebet]=DBround(tonumber(split1[3]))
 									Calc_DB_Totals()
 								end
+							end
+						end
+
+						if strupper(split1[2]) == "NONE" or strupper(split1[2]) == "NOONE" or strupper(split1[2]) == "NODEATH" then
+							betteeInRaid = 1
+							if DeathBet['Bad'][rebet] == 'NONE' and DeathBet['Bet'][rebet] == DBround(tonumber(split1[3])) then
+								Send_Whisper(arg2, "You have already made that bet!")
+							else
+								Send_Whisper(arg2, "Bet changed from " .. DeathBet['Bet'][rebet] .. " on " .. DeathBet['Bad'][rebet] .. " to " .. DBround(tonumber(split1[3])) .. " on 'No Deaths'.")
+								DeathBet['Bad'][rebet]= 'NONE'
+								DeathBet['Bet'][rebet]=DBround(tonumber(split1[3]))
+								Calc_DB_Totals()
 							end
 						end
 						
@@ -489,7 +522,11 @@ function Death_Bet_OnEvent(self, event, ...)
 		--TEST FUNCTION
 		if strlower(split1[1]) == "!testbet" then
 			DeathBet['Player'][lastkey+1]=arg2
-			DeathBet['Bad'][lastkey+1]=strupper(split1[2])
+			if strupper(split1[2]) == 'NONE' or strupper(split1[2]) == 'NOONE' or strupper(split1[2]) == 'NODEATH' then
+				DeathBet['Bad'][lastkey+1] = 'NONE'
+			else
+				DeathBet['Bad'][lastkey+1]=strupper(split1[2])
+			end
 			DeathBet['Bet'][lastkey+1]=DBround(tonumber(split1[3]))
 			Addto_DB_Totals(DeathBet['Bad'][lastkey+1], DeathBet['Bet'][lastkey+1])
 		end
@@ -528,10 +565,25 @@ function Death_Bet_OnEvent(self, event, ...)
 		elseif strlower(split1[1]) == "!odds" and DBActive == 0 then
 			Send_Whisper( arg2, "Betting has not started!" )
 		elseif strlower(split1[1]) == "!odds" and DBActive == 2 and DeathCheck ~= 0 then
-			Send_Whisper( arg2, "Payout already calculated and will print when encounter has finished." )
-		end
-				
+			local whispered = 0
+			for key,value in pairs(DBWinners['Payout']['Name']) do
+				if value == arg2 then
+					whispered = 1
+					Send_Whisper(arg2, "You won! You will be paid " .. DBWinners['Payout']['Amount'][key] .. ". You will be notified of who will pay you when encounter has finished.")
+				end
+			end
 			
+			for key,value in pairs(DBLosers['Payout']['Name']) do
+				if value == arg2 then
+					whispered = 1
+					Send_Whisper(arg2, "You lost! You will pay " .. DBLosers['Payout']['Amount'][key] .. ". You will be notified of who to pay when encounter has finished.")
+				end
+			end
+			
+			if whispered == 0 then
+				Send_Whisper( arg2, "Payout has been calculated. You did not bet on this encounter!" )
+			end
+		end
 	
 		--Watch combat log
 		--On unit death, check to see if its a player who was bet on and save payouts to be printed after combat has ended
@@ -577,7 +629,18 @@ function Death_Bet_OnEvent(self, event, ...)
 	if event == "PLAYER_REGEN_ENABLED" and DBActive == 2 then
 		--On boss death with no players who were bet on dieing, reset bets
 		if DeathCheck == 0 then
-			EndOutput = "No deaths. No winners."
+			for key,value in pairs(DeathBet['Bad']) do
+				if value == 'NONE' then
+					DeathCheck = 1
+					DBPayout('NONE', nil, "Death")
+				end
+			end
+			
+			if DeathCheck == 0 then 
+				EndOutput = "No deaths. No winners."
+			else
+				EndOutput = "No deaths. Winners and losers will be notified of pending payments."
+			end
 		end
 		
 		--Print out correct end output and clear bets for next boss
