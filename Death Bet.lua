@@ -463,13 +463,19 @@ function Death_Bet_OnEvent(self, event, ...)
 						end
 					else
 						local betteeInRaid = 0
+						local printprev = ''
 						for key,value in pairs(DeathBet['Raid']) do
 							if strupper(split1[2]) == value then
 								betteeInRaid = 1
 								if DeathBet['Bad'][rebet] == strupper(split1[2]) and DeathBet['Bet'][rebet] == DBround(tonumber(split1[3])) then
 									Send_Whisper(arg2, "You have already made that bet!")
 								else
-									Send_Whisper(arg2, "Bet changed from " .. DeathBet['Bet'][rebet] .. " on " .. DeathBet['Bad'][rebet] .. " to " .. DBround(tonumber(split1[3])) .. " on " .. strupper(split1[2]) .. ".")
+									if DeathBet['Bad'][rebet] == 'NONE' then
+										printprev = "'No Deaths'"
+									else
+										printprev = DeathBet['Bad'][rebet]
+									end
+									Send_Whisper(arg2, "Bet changed from " .. DeathBet['Bet'][rebet] .. " on " .. printprev .. " to " .. DBround(tonumber(split1[3])) .. " on " .. strupper(split1[2]) .. ".")
 									DeathBet['Bad'][rebet]=strupper(split1[2])
 									DeathBet['Bet'][rebet]=DBround(tonumber(split1[3]))
 									Calc_DB_Totals()
@@ -482,7 +488,12 @@ function Death_Bet_OnEvent(self, event, ...)
 							if DeathBet['Bad'][rebet] == 'NONE' and DeathBet['Bet'][rebet] == DBround(tonumber(split1[3])) then
 								Send_Whisper(arg2, "You have already made that bet!")
 							else
-								Send_Whisper(arg2, "Bet changed from " .. DeathBet['Bet'][rebet] .. " on " .. DeathBet['Bad'][rebet] .. " to " .. DBround(tonumber(split1[3])) .. " on 'No Deaths'.")
+								if DeathBet['Bad'][rebet] == 'NONE' then
+									printprev = "'No Deaths'"
+								else
+									printprev = DeathBet['Bad'][rebet]
+								end
+								Send_Whisper(arg2, "Bet changed from " .. DeathBet['Bet'][rebet] .. " on " .. printprev .. " to " .. DBround(tonumber(split1[3])) .. " on 'No Deaths'.")
 								DeathBet['Bad'][rebet]= 'NONE'
 								DeathBet['Bet'][rebet]=DBround(tonumber(split1[3]))
 								Calc_DB_Totals()
@@ -521,6 +532,10 @@ function Death_Bet_OnEvent(self, event, ...)
 		
 		--TEST FUNCTION
 		if strlower(split1[1]) == "!testbet" then
+			for key,value in pairs(DeathBet['Player']) do
+				lastkey = key
+			end
+			
 			DeathBet['Player'][lastkey+1]=arg2
 			if strupper(split1[2]) == 'NONE' or strupper(split1[2]) == 'NOONE' or strupper(split1[2]) == 'NODEATH' then
 				DeathBet['Bad'][lastkey+1] = 'NONE'
