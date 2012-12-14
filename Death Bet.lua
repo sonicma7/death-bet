@@ -14,19 +14,19 @@ RaidMemberCount = 0;
 --Bool to check for bets
 hasBets = 0;
 --Bool to check for first death (0 = No Death, 1 = Death w/winners, 2 = Death no winners)
-DeathCheck = 0
+DeathCheck = 0;
 --String to be used for end condition printouts
-EndOutput = ""
+EndOutput = "";
 --Bool to check if player disabled addon
-PlayerDisable = 0
+PlayerDisable = 0;
 --Bool to check if other betting disabled addon
-DeathBetDisable = 0
+DeathBetDisable = 0;
 --Global for name of player
-DBPlayerName = ""
+DBPlayer = "";
 --Global for name of player realm (Should always be nil)
-DBRealmName = nil
+DBRealm = nil;
 --Global for player running DeathBet
-DBRunning = ""
+DBRunning = "";
 
 --[[ losers[]
 Name: Loser player Name
@@ -72,7 +72,9 @@ function Death_Bet_End_Button_OnClick()
 end
 
 function Death_Bet_Announce_Button_OnClick()
-        DBSpread("Gamble", nil)
+	if DeathBetDisable == 0 and PlayerDisable == 0 then
+		DBSpread("Gamble", nil)
+	end
 end
 
 function Death_Bet_Clear_Button_OnClick()
@@ -99,7 +101,6 @@ function Death_Bet_OnLoad()
 	SlashCmdList['DB'] = START_Command;
 	DEFAULT_CHAT_FRAME:AddMessage("LOADED UP!")
 	Send_Addon( "Load" )
-	DBPlayerName, DBRealmName = UnitName("player")
 	GUIUpdate()
 end
 
@@ -152,7 +153,6 @@ function START_Command(cmd)
 		DBActive = 2
 		Calc_DB_Totals()
 		DBSpread("Gamble", nil)
-		Send_Addon( "End" )
 	--Clear bets for next gambling round
 	--Whisper winners and losers amount needed to pay, if necessary
 	elseif cmd == "clear" then
@@ -432,9 +432,13 @@ function Death_Bet_OnEvent(self, event, ...)
 	local index = GetChannelName("MacheteGamble")
 	local goodChannel = 1
 	local split2 = {}
+	DBPlayer, DBRealm = UnitName("player")
 
 	if event == "CHAT_MSG_ADDON" then
-		if arg1 == "DeathBet" and arg4 ~= DBPlayerName then
+		if arg1 == "DeathBet" and arg4 ~= DBPlayer then
+			--Way to test addon msgs
+			--Send_Whisper("Eibon", arg1 .. "-" .. arg2 .. "-" .. arg3 .. "-" .. arg4 .. "-" .. DBPlayer)
+
 			if arg2 == "Started Betting" and DBActive == 0 then
 				DeathBetDisable = 1
 				DBRunning = arg4
