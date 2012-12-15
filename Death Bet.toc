@@ -1,6 +1,7 @@
-## Interface: 30000
+## Interface: 50100
 ## Title: Death Bet
 ## Author: Justin Toth & Mark Aversa
+## SavedVariables: Death_Bet_Channel
 ## SavedVariablesPerCharacter: Death_Bet_History
 ## Version: 0.1
 Death Bet.xml
