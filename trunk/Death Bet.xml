@@ -214,7 +214,7 @@
 		<Scripts>
 			<OnLoad>
 				Death_Bet_OnLoad()
-				DEFAULT_CHAT_FRAME:AddMessage("Autobus Locked and Loaded!")
+				DEFAULT_CHAT_FRAME:AddMessage("Death Bet Locked and Loaded!")
 			</OnLoad>
 			
 			<OnEvent>

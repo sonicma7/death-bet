@@ -445,12 +445,13 @@ end
 function Death_Bet_OnEvent(self, event, ...)
 	local arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9 = ...;
 	
-	if event == "ADDON_LOADED" then
+	if event == "ADDON_LOADED" and arg1 == "Death Bet" then
 		DBActive = 0
 		DBChannel = Death_Bet_Channel
 		if DBChannel == "" or DBChannel == nil then
 			DBChannel = "MacheteGamble"
 		end
+		DEFAULT_CHAT_FRAME:AddMessage("Death Bet Channel: '" .. DBChannel .. "'. To change, type '/db channel CHANNELNAME'")
 		DBPlayer, DBRealm = UnitName("player")
 		Send_Addon( "Load" )
 	end
