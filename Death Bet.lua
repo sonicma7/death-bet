@@ -288,11 +288,13 @@ function DB_Fill_Raid()
 		for k in pairs(DeathBet['Raid']) do
 			DeathBet['Raid'][k] = nil
 		end
-		for i=1,RaidMemberCount,1 do
-			local name, rank, subgroup, level, class, fileName,
-				zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(i)
-			if name ~= nil then
-				DeathBet['Raid'][i] = gsub(strupper(name), " ", "")
+		if RaidMemberCount ~= 0 then
+			for i=1,RaidMemberCount,1 do
+				local name, rank, subgroup, level, class, fileName,
+					zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(i)
+				if name ~= nil then
+					DeathBet['Raid'][i] = gsub(strupper(name), " ", "")
+				end
 			end
 		end
 	end
@@ -329,20 +331,24 @@ function DB_Fill_Raid()
 			end
 		end
 	end
+
+	--For all people on list call function to remove them
+	for key,value in pairs(BadRemove) do
+		Remove_Bad(value)
+	end
 	
 	--Check for bets placed by player who is no longer in raid
 	for key,value in pairs(DeathBet['Player']) do
 		local badfound = 0
 		for key2,value2 in pairs(DeathBet['Raid']) do
-			if value == value2 then
-				Remove_Bet(value)
+			if strupper(value) == strupper(value2) then
+				badfound = 1
 			end
 		end
-	end
-
-	--For all people on list call function to remove them
-	for key,value in pairs(BadRemove) do
-		Remove_Bad(value)
+		
+		if badfound == 0 then
+			Remove_Bet(value)
+		end
 	end
 end
 
@@ -409,6 +415,11 @@ end
 function DBSpread(channel, person)
 	local index = GetChannelName(DBChannel)
 	
+	if channel ~= "Whisper" then
+		SendChatMessage("Spread:","CHANNEL","ORCISH",index)
+	end
+	
+	
 	local foundbad = 0
 	local tmpvalue = ''
 	for key,value in pairs(TotalBets['Bad']) do
@@ -422,7 +433,6 @@ function DBSpread(channel, person)
 		if channel == "Whisper" then
 			Send_Whisper(person, key .. ". " .. tmpvalue .. " " ..  TotalBets['Total'][key])
 		else
-			SendChatMessage("Spread:","CHANNEL","ORCISH",index)
 			SendChatMessage(key .. ". " .. tmpvalue .. " " .. TotalBets['Total'][key],"CHANNEL","ORCISH",index)
 		end
 	end
@@ -501,7 +511,7 @@ function Death_Bet_OnEvent(self, event, ...)
 	
 	if PlayerDisable == 0 and DeathBetDisable == 0 then
 		if event == "CHAT_MSG_CHANNEL" then
-			if strlower(arg9) ~= DBChannel then
+			if strlower(arg9) ~= strlower(DBChannel) then
 				goodChannel = 0
 				split2 = DBsplit(" ", arg1)
 			end
