@@ -203,7 +203,6 @@ end
 
 --Function to print out help options for player
 function Print_Help( player )
-
 	if DBActive == 0 then
 		Send_Whisper(player, "Betting has not started.")
 	elseif DBActive == 1 then
@@ -222,6 +221,9 @@ function Print_Help( player )
 	elseif DBActive == 2 then
 		Send_Whisper(player, "Currently available commands:")
 		Send_Whisper(player, "Check your possible payout = '!odds'")
+	elseif DBActive == 3 then
+		Send_Whisper(player, "Currently available commands:")
+		Send_Whisper(player, "Reprint payouts = '!reprint'")
 	end
 end
 
@@ -643,7 +645,7 @@ function Death_Bet_OnEvent(self, event, ...)
 			
 			elseif strlower(split1[1]) == "!bet" and DBActive == 2 then
 				Send_Whisper(arg2, "Betting has ended!")
-			elseif strlower(split1[1]) == "!bet" and DBActive == 0 then
+			elseif strlower(split1[1]) == "!bet" and (DBActive == 0 or DBActive == 3) then
 				Send_Whisper(arg2, "Betting has not started!")
 			end
 
@@ -654,6 +656,10 @@ function Death_Bet_OnEvent(self, event, ...)
 				else
 					DBSpread("Whisper", arg2)
 				end
+			end
+			
+			if strlower(split1[1]) == "!reprint" and DBActive == 3 then
+				Print_Payout( "Reprint", arg2 );
 			end
 		
 			--TEST FUNCTION
@@ -677,7 +683,7 @@ function Death_Bet_OnEvent(self, event, ...)
 				Remove_Bet( arg2 )
 			elseif strlower(split1[1]) == "!clear" and DBActive == 2 then
 				Send_Whisper(arg2, "Can not remove bet while encounter is in progress...cheater!")
-			elseif strlower(split1[1]) == "!clear" and DBActive == 0 then
+			elseif strlower(split1[1]) == "!clear" and (DBActive == 0 or DBActive == 3) then
 				Send_Whisper(arg2, "No bet to clear.")
 			end
 		
@@ -703,7 +709,7 @@ function Death_Bet_OnEvent(self, event, ...)
 				end
 			elseif strlower(split1[1]) == "!odds" and DBActive == 1 then
 				Send_Whisper( arg2, "Can not check payout until betting is done!" )
-			elseif strlower(split1[1]) == "!odds" and DBActive == 0 then
+			elseif strlower(split1[1]) == "!odds" and (DBActive == 0 or DBActive == 3) then
 				Send_Whisper( arg2, "Betting has not started!" )
 			elseif strlower(split1[1]) == "!odds" and DBActive == 2 and DeathCheck ~= 0 then
 				local whispered = 0
@@ -903,6 +909,28 @@ function Print_Payout( channel, player )
 		end
 		Send_Whisper( player, "Possible loss: " .. saveBet )
 	--Should only be called on combat end and there is a winner
+	elseif channel == "Reprint" then
+		for key,value in pairs(DBWinners['Payout']['Amount']) do
+			local currpay = value
+			if currpay == 0 then
+				Send_Whisper( player, "Winners did not win any money...womp, womp")
+			end
+			local loserindex = 1
+			while currpay ~= 0 do
+				if DBLosers['Payout']['Amount'][loserindex] ~= 0 then
+					if currpay <= DBLosers['Payout']['Amount'][loserindex] then
+						Send_Whisper( player, DBWinners['Payout']['Name'][key] .. " should receive " .. currpay .. " from " .. DBLosers['Payout']['Name'][loserindex] )
+						DBLosers['Payout']['Amount'][loserindex] = DBLosers['Payout']['Amount'][loserindex] - currpay
+						currpay = 0
+					else
+						Send_Whisper( player, DBWinners['Payout']['Name'][key] .. " should receive " .. DBLosers['Payout']['Amount'][loserindex] .. " from " .. DBLosers['Payout']['Name'][loserindex] )
+						currpay = currpay - DBLosers['Payout']['Amount'][loserindex]
+						DBLosers['Payout']['Amount'][loserindex] = 0
+					end
+				end
+				loserindex = loserindex + 1
+			end
+		end
 	else
 		--Print out loss notifications
 		for key,value in pairs(DBLosers['Payout']['Name']) do
@@ -939,7 +967,6 @@ function Print_Payout( channel, player )
 			end
 		end
 	end
-
 end
 
 --[[
