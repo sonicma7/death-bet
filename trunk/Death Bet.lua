@@ -50,6 +50,9 @@ Amount: Amount owed to that player
 ]]--
 DBWinners = {['Name'] = {}, ['Bet'] = {}, ['Portion']={}, ['Payout']={ ['Name'] = {}, ['Amount']={}}}
 
+--Previous death counter, consecutive deaths by same person reduces payout
+DBPrevDeath = "";
+DBPrevDeathCnt = 1;
 
 function Death_Bet_OnMouseDown()
 	Death_Bet_MainFrame:StartMoving();
@@ -729,6 +732,13 @@ function Death_Bet_OnEvent(self, event, ...)
 			if arg2 == "UNIT_DIED" and DBActive == 2 and DeathCheck == 0 then
 				for key2,value2 in pairs(DeathBet['Raid']) do
 					if strupper(arg9) == strupper(value2) then
+						if DBPrevDeath == strtoupper(arg9) then
+							DBPrevDeathCnt = DBPrevDeathCnt + 1;
+						else
+							DBPrevDeath = strupper(arg9);
+							DBPrevDeathCnt = 1;
+						end
+						
 						local name, rank, subgroup, level, class, fileName,
 							zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(key2)
 						for key,value in pairs(DeathBet['Bad']) do
@@ -785,6 +795,7 @@ function Death_Bet_OnEvent(self, event, ...)
 			--Print out correct end output and clear bets for next boss
 			SendChatMessage(EndOutput,"CHANNEL","ORCISH",index)
 			if DeathCheck == 1 then
+				DBActive = 3
 				Print_Payout( "Gamble", nil )
 			end
 		
@@ -826,6 +837,31 @@ function GUIUpdate()
 	
 			for key,value in pairs(TotalBets['Bad']) do
 				outputstring = outputstring .. value .. " " .. TotalBets['Total'][key] .. "\n"
+			end
+		elseif DBActive == 3 then
+			outputstring = "GAME OVER\n\n"
+		
+			for key,value in pairs(DBWinners['Payout']['Amount']) do
+				local currpay = value
+				if currpay == 0 then
+					outputstring2 = outputstring2 .. DBWinners['Payout']['Name'][key] .. " +/-0\n"
+				end
+				
+				local loserindex = 1
+				while currpay ~= 0 do
+					if DBLosers['Payout']['Amount'][loserindex] ~= 0 then
+						if currpay <= DBLosers['Payout']['Amount'][loserindex] then
+							outputstring2 = outputstring2 .. DBWinners['Payout']['Name'][key] .. " <- " .. currpay .. " <- " .. DBLosers['Payout']['Name'][loserindex] .. "\n"
+							DBLosers['Payout']['Amount'][loserindex] = DBLosers['Payout']['Amount'][loserindex] - currpay
+							currpay = 0
+						else
+							outputstring2 = outputstring2 .. DBWinners['Payout']['Name'][key] .. " <- " .. DBLosers['Payout']['Amount'][loserindex] .. " <- " .. DBLosers['Payout']['Name'][loserindex] .. "\n"
+							currpay = currpay - DBLosers['Payout']['Amount'][loserindex]
+							DBLosers['Payout']['Amount'][loserindex] = 0
+						end
+					end
+					loserindex = loserindex + 1
+				end
 			end
 		end
 	end
@@ -907,7 +943,6 @@ function Print_Payout( channel, player )
 end
 
 --[[
-****In Developement****
 Function will take a string of the person who died(post checking if valid for payouts).
 ]]--
 
@@ -943,6 +978,8 @@ function DBPayout( loser, winner, channel )
 			winnersindex = winnersindex + 1
 			DBWinners['Name'][winnersindex] = DeathBet['Player'][key]
 			DBWinners['Bet'][winnersindex] = DeathBet['Bet'][key]
+			if( loser == DBPrevDeath )
+				DBWinners['Bet'][winnersindex] = DBRound(DBWinners['Bet'][winnersindex] / (DBPrevDeathCnt + 1))
 		else
 			losersindex = losersindex + 1
 			DBLosers['Name'][losersindex] = DeathBet['Player'][key]
