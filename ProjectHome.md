@@ -1,0 +1,1 @@
+WoW Addon to gamble on player deaths
